@@ -1,0 +1,65 @@
+#!/bin/bash
+set -xe
+export LC_ALL=C
+
+########################################
+# Functions and Basic Configuration    #
+########################################
+
+# Load common functions and set up cleanup trap
+source /common.sh
+install_cleanup_trap
+
+# Load additional configuration (e.g., BASE_USER)
+source /files/00-config
+
+########################################
+# Configuration                        #
+########################################
+
+REPO="https://github.com/KlipperScreen/KlipperScreen.git"
+TARGET_DIR="/home/${BASE_USER}/KlipperScreen"
+INSTALL_SCRIPT="${TARGET_DIR}/scripts/KlipperScreen-install.sh"
+UPDATE_FRAGMENT="/files/moonraker_klipperscreen.conf"
+
+########################################
+# Install dependencies                 #
+########################################
+
+apt-get install --yes git
+
+########################################
+# Clone repository                     #
+########################################
+
+pushd "/home/${BASE_USER}" &> /dev/null || exit 1
+if [[ ! -d "${TARGET_DIR}" ]]; then
+    sudo -u "${BASE_USER}" git clone "${REPO}" "${TARGET_DIR}"
+fi
+popd &> /dev/null || exit 1
+
+########################################
+# Install KlipperScreen                #
+########################################
+
+if [[ ! -x "${INSTALL_SCRIPT}" ]]; then
+    echo "KlipperScreen install script not found or not executable: ${INSTALL_SCRIPT}"
+    exit 1
+fi
+sudo -u "${BASE_USER}" "${INSTALL_SCRIPT}"
+
+########################################
+# Add update_manager entry             #
+########################################
+
+if [[ -f "${MOONRAKER_CONFIG}" && -f "${UPDATE_FRAGMENT}" ]]; then
+    if ! grep -q '^\[update_manager KlipperScreen\]' "${MOONRAKER_CONFIG}"; then
+        cat "${UPDATE_FRAGMENT}" >> "${MOONRAKER_CONFIG}"
+    fi
+fi
+
+########################################
+# Enable service                       #
+########################################
+
+systemctl_if_exists enable KlipperScreen.service
