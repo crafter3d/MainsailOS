@@ -12,11 +12,9 @@ single-board computer (SBC). It simplifies getting started with Klipper and the
 [Mainsail](https://github.com/mainsail-crew/mainsail) web interface by providing
 everything you need in one ready-to-use package.
 
-Our images are built on stable, well-supported distributions:
+Our image is built on a stable, well-supported distribution:
 
--   **Raspberry Pi:** Based on the official [Raspberry Pi OS](https://www.raspberrypi.com/software/).
--   **Other SBCs:** Based on [Armbian](https://www.armbian.com/) or
-    vendor-specific OS builds (e.g., [OrangePiOS](https://github.com/orangepi-xunlong/orangepi-build)).
+-   **Raspberry Pi (64-bit):** Based on the official [Raspberry Pi OS](https://www.raspberrypi.com/software/).
 
 All images come with the necessary software pre-installed and configured, so you
 can focus on printing. For a complete list of what's included, see the

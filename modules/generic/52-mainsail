@@ -17,8 +17,8 @@ source /files/00-config
 # Configuration                        #
 ########################################
 
-DOWNLOAD_URL="https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip"
-CONFIG_REPO="https://github.com/mainsail-crew/mainsail-config.git"
+DOWNLOAD_URL="https://github.com/crafter3d/mainsail/releases/latest/download/mainsail.zip"
+CONFIG_REPO="https://github.com/crafter3d/mainsail-config.git"
 DEPS=(git nginx unzip)
 
 apt-get install --yes "${DEPS[@]}"
