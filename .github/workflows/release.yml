@@ -302,7 +302,12 @@ jobs:
   update-rpi-imager:
     needs: [ finish-release ]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
+      - name: "📥 Checkout"
+        uses: actions/checkout@v4
+
       - name: "📥 Download snipes"
         uses: robinraju/release-downloader@v1
         with:
@@ -336,24 +341,34 @@ jobs:
       - name: "📋 Upload to Release"
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
         run: |
           gh release upload "${{ github.event.inputs.version }}" "rpi-imager.json" --clobber
 
-      - name: "🔧 Move in seperate dir"
-        if: ${{ github.repository_owner == 'Mainsail-Crew' }}
+      - name: "📦 Prepare GitHub Pages artifacts"
         run: |
-          mkdir upload
+          mkdir -p upload
           mv rpi-imager.json ./upload
+          mv rpi-images.json ./upload
 
-      - name: "📋 Upload to remote server"
+          if [ -f "rpi-imager.png" ]; then
+            cp "rpi-imager.png" ./upload/rpi-imager.png
+          elif [ -f ".github/rpi-imager.png" ]; then
+            cp ".github/rpi-imager.png" ./upload/rpi-imager.png
+          elif [ -f ".github/sdcard-logo.png" ]; then
+            cp ".github/sdcard-logo.png" ./upload/rpi-imager.png
+          else
+            echo "::error::No rpi-imager.png found (expected rpi-imager.png, .github/rpi-imager.png, or .github/sdcard-logo.png)."
+            exit 1
+          fi
+
+      - name: "🚀 Publish GitHub Pages"
         if: ${{ github.repository_owner == 'Mainsail-Crew' }}
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          server: ${{ secrets.OSHOST }}
-          username: ${{ secrets.OSUSER }}
-          password: ${{ secrets.OSPASSWORD }}
-          local-dir: ./upload/
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./upload
+          force_orphan: true
 
   update-changelog:
     needs: [ build ]
