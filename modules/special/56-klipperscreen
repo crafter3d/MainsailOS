@@ -59,7 +59,26 @@ if [[ -f "${MOONRAKER_CONFIG}" && -f "${UPDATE_FRAGMENT}" ]]; then
 fi
 
 ########################################
-# Enable service                       #
+# Ship service disabled — enable post-boot via:
+#   sudo systemctl enable --now KlipperScreen.service
 ########################################
 
-systemctl_if_exists enable KlipperScreen.service
+systemctl_if_exists disable KlipperScreen.service
+
+########################################
+# Deliver baseline KlipperScreen config #
+########################################
+
+cat > "/home/${BASE_USER}/printer_data/config/KlipperScreen.conf" << 'EOF'
+[main]
+default_printer: Crafter3D
+
+[preheat PLA]
+extruder: 210
+heater_bed: 60
+
+[preheat PETG]
+extruder: 240
+heater_bed: 80
+EOF
+chown "${BASE_USER}:${BASE_USER}" "/home/${BASE_USER}/printer_data/config/KlipperScreen.conf"
