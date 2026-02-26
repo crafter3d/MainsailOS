@@ -1,0 +1,44 @@
+#!/bin/bash
+set -xe
+export LC_ALL=C
+
+########################################
+# Functions and Basic Configuration    #
+########################################
+
+# Load common functions and set up cleanup trap
+source /common.sh
+install_cleanup_trap
+
+# Load additional configuration (e.g., BASE_USER)
+source /files/00-config
+
+########################################
+# Configuration                        #
+########################################
+
+REPO="https://github.com/crafter3d/printer-config.git"
+TARGET_DIR="/home/${BASE_USER}/printer-config"
+
+########################################
+# Install dependencies                 #
+########################################
+
+apt-get install --yes git
+
+########################################
+# Clone printer-config repository      #
+########################################
+
+pushd "/home/${BASE_USER}" &> /dev/null || exit 1
+if [[ ! -d "${TARGET_DIR}" ]]; then
+    sudo -u "${BASE_USER}" git clone "${REPO}" "${TARGET_DIR}"
+fi
+popd &> /dev/null || exit 1
+
+########################################
+# Run install script to create symlinks#
+# (printer_data/config → printer-config)
+########################################
+
+sudo -u "${BASE_USER}" bash "${TARGET_DIR}/scripts/install.sh"

@@ -17,8 +17,8 @@ source /files/00-config
 # Configuration                        #
 ########################################
 
-# Use DIST_NAME in lowercase as the new hostname
-NEW_HOSTNAME=${DIST_NAME,,}
+# Use HOSTNAME variable when set, falling back to lowercase DIST_NAME
+NEW_HOSTNAME=${HOSTNAME:-${DIST_NAME,,}}
 
 function get_parent {
     grep VERSION_CODENAME /etc/os-release | cut -d '=' -f2

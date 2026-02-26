@@ -1,6 +1,6 @@
 
 ####################################################
-####     MainsailOS specific configurations     ####
+#### MainsailOS (Crafter3D) specific configurations ####
 ####################################################
 ####      DO NOT CHANGE SECTION BELOW !!!       ####
 ####   UNLESS YOU KNOW WHAT YOU ARE DOING !!!   ####

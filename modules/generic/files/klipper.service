@@ -10,10 +10,10 @@ WantedBy=multi-user.target
 
 [Service]
 Type=simple
-User=pi
+User=${BASE_USER}
 RemainAfterExit=yes
-WorkingDirectory=/home/pi/klipper
-EnvironmentFile=/home/pi/printer_data/systemd/klipper.env
-ExecStart=/home/pi/klippy-env/bin/python $KLIPPER_ARGS
+WorkingDirectory=/home/${BASE_USER}/klipper
+EnvironmentFile=/home/${BASE_USER}/printer_data/systemd/klipper.env
+ExecStart=/home/${BASE_USER}/klippy-env/bin/python $KLIPPER_ARGS
 Restart=always
 RestartSec=10

@@ -14,8 +14,9 @@ export HOLD_PKGS=(
     "rpi-eeprom"
 )
 
-export BASE_USER=pi
+export BASE_USER=crafter3d
 export DIST_NAME=MainsailOS
+export HOSTNAME=crafter3d
 
 export PRINTER_DATA_DIRS="printer_data printer_data/config printer_data/comms printer_data/logs printer_data/systemd"
 export MOONRAKER_CONFIG="/home/${BASE_USER}/printer_data/config/moonraker.conf"

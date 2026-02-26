@@ -212,8 +212,8 @@ if [[ "$(grep -c "init" "${cmdltxt}")" != "0" ]] && \
     ## Make sure not failing rc.local
     return 0
 fi
-## Abort if user = pi
-if [[ "${DEFAULT_USER}" == "pi" ]]; then
+## Abort if user = crafter3d (default; already set up for this user)
+if [[ "${DEFAULT_USER}" == "crafter3d" ]]; then
     echo -e "[${YEL}SKIPPED${NOC}] \
     ${WHITE}User is ${DEFAULT_USER}! Nothing to do ...${NOC}"
     cleanup
