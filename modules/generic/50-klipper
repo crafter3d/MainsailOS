@@ -46,10 +46,18 @@ echo "Installing Dependencies"
 apt-get install --yes "${DEPS[@]}"
 
 ########################################
+# Ensure base user exists              #
+########################################
+
+if ! id -u "${BASE_USER}" > /dev/null 2>&1; then
+      useradd -m -s /bin/bash "${BASE_USER}"
+fi
+
+########################################
 # Add user to groups                   #
 ########################################
 
-## Make sure user pi has access to serial ports
+## Make sure BASE_USER has access to serial ports
 usermod -a -G "tty,dialout" "${BASE_USER}"
 
 ########################################
