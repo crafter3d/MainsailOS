@@ -1,0 +1,49 @@
+#!/bin/bash
+set -xe
+export LC_ALL=C
+
+########################################
+# Functions and Basic Configuration    #
+########################################
+
+# Load common functions and set up cleanup trap
+source /common.sh
+install_cleanup_trap
+
+# Load additional configuration (e.g., BASE_USER)
+source /files/00-config
+
+########################################
+# Install dependencies                 #
+########################################
+
+# whiptail is provided by newt, pre-installed on RPi OS Lite
+apt-get install --yes --no-install-recommends newt
+
+########################################
+# Install wizard script                #
+########################################
+
+cp /files/crafter3d-firstboot /usr/local/bin/crafter3d-firstboot
+chmod 0755 /usr/local/bin/crafter3d-firstboot
+
+########################################
+# Install systemd service              #
+########################################
+
+cp /files/crafter3d-firstboot.service /etc/systemd/system/crafter3d-firstboot.service
+systemctl_if_exists enable crafter3d-firstboot.service
+
+########################################
+# Drop marker so the wizard knows it   #
+# is a non-customized (raw-flash) boot #
+#                                      #
+# Pi Imager firstrun.sh does NOT       #
+# delete this file, so if the marker   #
+# still exists at first boot AND the   #
+# crafter3d user has no password it    #
+# means this image was not customised. #
+########################################
+
+touch "/home/${BASE_USER}/.crafter3d_firstboot_needed"
+chown "${BASE_USER}:${BASE_USER}" "/home/${BASE_USER}/.crafter3d_firstboot_needed"

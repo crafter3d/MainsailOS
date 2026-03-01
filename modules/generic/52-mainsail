@@ -34,6 +34,7 @@ echo "Copy the nginx configurations"
 cp /files/mainsail-nginx/mainsail /etc/nginx/sites-available/mainsail
 cp /files/mainsail-nginx/common_vars.conf /etc/nginx/conf.d/common_vars.conf
 cp /files/mainsail-nginx/upstreams.conf /etc/nginx/conf.d/upstreams.conf
+sed -i 's|${BASE_USER}|'"${BASE_USER}"'|g' /etc/nginx/sites-available/mainsail
 
 echo "Enable the site"
 ln -s /etc/nginx/sites-available/mainsail /etc/nginx/sites-enabled/

@@ -30,6 +30,8 @@ NOC="\e[0m"
 SERVICES=(moonraker klipper nginx sonar crowsnest)
 SYSTEMD_DIR="/etc/systemd/system"
 DEFAULT_USER="$(grep "1000" /etc/passwd | awk -F ':' '{print $1}')"
+# Username baked into the image at build time; used as the source in rename operations
+BUILD_USER="crafter3d"
 
 ### KlipperScreen workaround
 KS_INSTALLED="$(find /home/"${DEFAULT_USER}" -name "KlipperScreen" | wc -l)"
@@ -63,10 +65,8 @@ cleanup() {
 
 ### Change nginx root
 change_www_root() {
-    bash -c "
-        sed -i 's|/home/pi/mainsail|/home/${DEFAULT_USER}/mainsail|g' \
+    sed -i "s|/home/${BUILD_USER}/mainsail|/home/${DEFAULT_USER}/mainsail|g" \
         /etc/nginx/sites-available/mainsail
-    "
 }
 
 ### change username in service files
@@ -77,7 +77,7 @@ change_service_user() {
 
     for i in "${servicefile[@]}"; do
         if [[ -n "${i}" ]]; then
-        sed -i 's/pi/'"${DEFAULT_USER}"'/g' "${SYSTEMD_DIR}/${i}.service"
+            sed -i "s|${BUILD_USER}|${DEFAULT_USER}|g" "${SYSTEMD_DIR}/${i}.service"
         fi
     done
 }
@@ -87,7 +87,7 @@ change_env_user() {
     env_path="/home/${DEFAULT_USER}/printer_data/systemd"
     env_files="$(find "${env_path}" -type f -name "*.env" -printf "%f ")"
     for ef in ${env_files}; do
-        sed -i 's/pi/'"${DEFAULT_USER}"'/g' "${env_path}/${ef}"
+        sed -i "s|${BUILD_USER}|${DEFAULT_USER}|g" "${env_path}/${ef}"
     done
 }
 
@@ -107,8 +107,8 @@ relocate_venv() {
 
         # repair shebangs
         while IFS= read -r file ; do
-            sed -i 's|pi/'"${venv}"'|'"${DEFAULT_USER}"'/'"${venv}"'|g' "${file}"
-        done < <(grep -iR "pi/${venv}" "/home/${DEFAULT_USER}/${venv}"/* | cut -d":" -f1)
+            sed -i "s|${BUILD_USER}/${venv}|${DEFAULT_USER}/${venv}|g" "${file}"
+        done < <(grep -iR "${BUILD_USER}/${venv}" "/home/${DEFAULT_USER}/${venv}"/* | cut -d":" -f1)
     done
 }
 
@@ -118,35 +118,77 @@ patch_polkit_rules() {
     polkit_dir="/etc/polkit-1/rules.d"
     polkit_usr_dir="/usr/share/polkit-1/rules.d"
     if [[ -f "${polkit_dir}/moonraker.rules" ]]; then
-        sed -i 's/pi/'"${DEFAULT_USER}"'/g' "${polkit_dir}/moonraker.rules"
+        sed -i "s|${BUILD_USER}|${DEFAULT_USER}|g" "${polkit_dir}/moonraker.rules"
     fi
     if [[ -f "${polkit_usr_dir}/moonraker.rules" ]]; then
-        sed -i 's/ "pi"/ \"'"${DEFAULT_USER}"'\"/g' "${polkit_usr_dir}/moonraker.rules"
+        sed -i "s|\"${BUILD_USER}\"|\"${DEFAULT_USER}\"|g" "${polkit_usr_dir}/moonraker.rules"
     fi
     if [[ -f "${polkit_legacy_dir}/10-moonraker.pkla" ]]; then
-        sed -i 's/pi/'"${DEFAULT_USER}"'/g' "${polkit_legacy_dir}/10-moonraker.pkla"
+        sed -i "s|${BUILD_USER}|${DEFAULT_USER}|g" "${polkit_legacy_dir}/10-moonraker.pkla"
     fi
     if [[ -f "${polkit_dir}/KlipperScreen.rules" ]]; then
-        sed -i 's/pi/'"${DEFAULT_USER}"'/g' "${polkit_dir}/KlipperScreen.rules"
+        sed -i "s|${BUILD_USER}|${DEFAULT_USER}|g" "${polkit_dir}/KlipperScreen.rules"
     fi
     if [[ -f "${polkit_usr_dir}/KlipperScreen.rules" ]]; then
-        sed -i 's/pi/'"${DEFAULT_USER}"'/g' "${polkit_usr_dir}/KlipperScreen.rules"
+        sed -i "s|${BUILD_USER}|${DEFAULT_USER}|g" "${polkit_usr_dir}/KlipperScreen.rules"
     fi
     if [[ -f "${polkit_legacy_dir}/20-klipperscreen.pkla" ]]; then
-        sed -i 's/pi/'"${DEFAULT_USER}"'/g' "${polkit_legacy_dir}/20-klipperscreen.pkla"
+        sed -i "s|${BUILD_USER}|${DEFAULT_USER}|g" "${polkit_legacy_dir}/20-klipperscreen.pkla"
     fi
 }
 
 patch_cn_logpath() {
-    bash -c "
-        sed -i 's|/home/pi/printer_data/logs/crowsnest.log|/home/${DEFAULT_USER}/printer_data/logs/crowsnest.log|g' \
-        /home/${DEFAULT_USER}/printer_data/config/crowsnest.conf
-    "
+    sed -i "s|/home/${BUILD_USER}/printer_data/logs/crowsnest.log|/home/${DEFAULT_USER}/printer_data/logs/crowsnest.log|g" \
+        "/home/${DEFAULT_USER}/printer_data/config/crowsnest.conf"
 }
 
 patch_cn_logrotate() {
     if [[ -f "/etc/logrotate.d/crowsnest" ]]; then
-        sed -i 's/pi/'"${DEFAULT_USER}"'/g' "/etc/logrotate.d/crowsnest"
+        sed -i "s|${BUILD_USER}|${DEFAULT_USER}|g" "/etc/logrotate.d/crowsnest"
+    fi
+}
+
+ensure_cn_runtime_files() {
+    local config_dir logs_dir cn_cfg cn_tpl log_file
+    config_dir="/home/${DEFAULT_USER}/printer_data/config"
+    logs_dir="/home/${DEFAULT_USER}/printer_data/logs"
+    cn_cfg="${config_dir}/crowsnest.conf"
+    cn_tpl="/home/${DEFAULT_USER}/crowsnest/config/crowsnest.conf"
+    log_file="${logs_dir}/crowsnest.log"
+
+    install -d -m 755 -o "${DEFAULT_USER}" -g "${DEFAULT_USER}" "${config_dir}" "${logs_dir}"
+
+    if [[ ! -f "${cn_cfg}" ]] && [[ -f "${cn_tpl}" ]]; then
+        cp "${cn_tpl}" "${cn_cfg}"
+        chown "${DEFAULT_USER}:${DEFAULT_USER}" "${cn_cfg}"
+    fi
+
+    if [[ -f "${cn_cfg}" ]]; then
+        if grep -qE '^[[:space:]]*log_path[[:space:]]*:' "${cn_cfg}"; then
+            sed -i "s|^[[:space:]]*log_path[[:space:]]*:.*$|log_path: ${log_file}|g" "${cn_cfg}"
+        elif grep -qE '^\[crowsnest\]' "${cn_cfg}"; then
+            sed -i "/^\[crowsnest\]/a log_path: ${log_file}" "${cn_cfg}"
+        fi
+    fi
+
+    touch "${log_file}"
+    chown "${DEFAULT_USER}:${DEFAULT_USER}" "${log_file}"
+}
+
+patch_unresolved_baseuser_placeholders() {
+    local ngf
+    ngf="/etc/nginx/sites-available/mainsail"
+
+    if [[ -f "${ngf}" ]]; then
+        sed -i 's|${BASE_USER}|'"${DEFAULT_USER}"'|g' "${ngf}"
+    fi
+
+    if [[ -f "${SYSTEMD_DIR}/klipper.service" ]]; then
+        sed -i 's|${BASE_USER}|'"${DEFAULT_USER}"'|g' "${SYSTEMD_DIR}/klipper.service"
+    fi
+
+    if [[ -f "/home/${DEFAULT_USER}/printer_data/systemd/klipper.env" ]]; then
+        sed -i 's|${BASE_USER}|'"${DEFAULT_USER}"'|g' "/home/${DEFAULT_USER}/printer_data/systemd/klipper.env"
     fi
 }
 
@@ -214,6 +256,22 @@ if [[ "$(grep -c "init" "${cmdltxt}")" != "0" ]] && \
 fi
 ## Abort if user = crafter3d (default; already set up for this user)
 if [[ "${DEFAULT_USER}" == "crafter3d" ]]; then
+    patch_unresolved_baseuser_placeholders
+    ensure_cn_runtime_files
+    systemctl daemon-reload
+    systemctl restart nginx || true
+    systemctl restart klipper || true
+    systemctl restart crowsnest || true
+    ## Enable KlipperScreen if it was installed at build time
+    if [[ "${KS_INSTALLED}" = "1" ]]; then
+        echo -e "${WHITE}Enabling KlipperScreen service ...${NOC}"
+        systemctl enable --now KlipperScreen.service || true
+    fi
+    ## If crafter3d has a password set, Pi Imager was used → suppress the first-boot wizard
+    if passwd -S crafter3d 2>/dev/null | grep -qE '^crafter3d P '; then
+        rm -f "/home/crafter3d/.crafter3d_firstboot_needed"
+        systemctl disable crafter3d-firstboot.service 2>/dev/null || true
+    fi
     echo -e "[${YEL}SKIPPED${NOC}] \
     ${WHITE}User is ${DEFAULT_USER}! Nothing to do ...${NOC}"
     cleanup
@@ -253,6 +311,14 @@ echo -e "${WHITE}Patching crowsnest logpath ...${NOC}[${GRE}OK${NOC}]"
 echo -e "${WHITE}Patching crowsnest logrotate ...${NOC}"
 patch_cn_logrotate
 echo -e "${WHITE}Patching crowsnest logrotate ...${NOC}[${GRE}OK${NOC}]"
+## ensure crowsnest runtime files
+echo -en "${WHITE}Ensuring crowsnest runtime files ...${NOC}\r"
+ensure_cn_runtime_files
+echo -e "${WHITE}Ensuring crowsnest runtime files ...${NOC}[${GRE}OK${NOC}]"
+## patch unresolved BASE_USER placeholders
+echo -en "${WHITE}Patching unresolved BASE_USER placeholders ...${NOC}\r"
+patch_unresolved_baseuser_placeholders
+echo -e "${WHITE}Patching unresolved BASE_USER placeholders ...${NOC}[${GRE}OK${NOC}]"
 ## fix broken links
 echo -en "${WHITE}Fix broken symlinks ...${NOC}\r"
 fix_broken_links
@@ -272,6 +338,12 @@ systemctl daemon-reload
 echo -e "${WHITE}Apply service file changes ...${NOC}[${GRE}OK${NOC}]"
 ## do a short break
 sleep 2
+## enable KlipperScreen persistently if installed
+if [[ "${KS_INSTALLED}" = "1" ]]; then
+    echo -en "${WHITE}Enabling KlipperScreen service ...${NOC}\r"
+    systemctl enable KlipperScreen.service || true
+    echo -e "${WHITE}Enabling KlipperScreen service ...${NOC}[${GRE}OK${NOC}]"
+fi
 ## restart services
 echo -e "${WHITE}Trying to restart services ...${NOC}"
 start_services
@@ -280,6 +352,9 @@ echo -e "${WHITE}Waiting 30 seconds for service restart completed ...${NOC}"
 sleep 30
 ## Cleanup
 echo -e "${WHITE}Cleanup files, remove postrename ...${NOC}"
+## Pi Imager customization ran (user was renamed) — wizard must not run
+systemctl disable crafter3d-firstboot.service 2>/dev/null || true
+rm -f "/home/crafter3d/.crafter3d_firstboot_needed"
 cleanup
 sleep 2
 ## reboot system
