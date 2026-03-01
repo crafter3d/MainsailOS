@@ -1,0 +1,24 @@
+[Unit]
+Description=Crafter3D First-Boot Setup Wizard
+Documentation=https://github.com/crafter3d/MainsailOS
+# Run after the normal boot completes, but before display-manager-like services
+After=multi-user.target network-online.target
+# Must not start while Pi Imager firstrun / init_resize are still running
+After=rc-local.service
+# Hold back KlipperScreen until the wizard has had a chance to run
+Before=KlipperScreen.service
+ConditionPathExists=/home/crafter3d/.crafter3d_firstboot_needed
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/usr/local/bin/crafter3d-firstboot
+StandardInput=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+# Run as root — needs raspi-config and systemctl
+User=root
+
+[Install]
+WantedBy=multi-user.target

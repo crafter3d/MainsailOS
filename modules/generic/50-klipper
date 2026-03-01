@@ -20,7 +20,8 @@ source /files/00-config
 SRC_DIR="/home/${BASE_USER}/klipper"
 ENV_DIR="/home/${BASE_USER}/klippy-env"
 
-REPO="https://github.com/Klipper3d/klipper.git"
+REPO="${KLIPPER_REPO:-https://github.com/Klipper3d/klipper.git}"
+KLIPPER_PINNED_REF="${KLIPPER_REF:-}"
 
 DEPS=(git \
       # Packages for python cffi
@@ -81,6 +82,15 @@ pushd "/home/${BASE_USER}" &> /dev/null || exit 1
 echo "Cloning repo ..."
 sudo -u "${BASE_USER}" git clone ${REPO} klipper
 
+if [[ -n "${KLIPPER_PINNED_REF}" ]]; then
+    echo "Checking out pinned Klipper ref: ${KLIPPER_PINNED_REF}"
+    sudo -u "${BASE_USER}" git -C "${SRC_DIR}" fetch --all --tags
+    sudo -u "${BASE_USER}" git -C "${SRC_DIR}" checkout "${KLIPPER_PINNED_REF}"
+fi
+
+echo "Installed Klipper revision:"
+sudo -u "${BASE_USER}" git -C "${SRC_DIR}" describe --tags --always || true
+
 ########################################
 # Create printer_data directories      #
 ########################################
@@ -112,5 +122,7 @@ popd &> /dev/null || exit 1
 echo "Copy Service and enable it"
 cp /files/klipper.service /etc/systemd/system/klipper.service
 cp /files/klipper.env /home/"${BASE_USER}"/printer_data/systemd/klipper.env
+sed -i 's|${BASE_USER}|'"${BASE_USER}"'|g' /etc/systemd/system/klipper.service
+sed -i 's|${BASE_USER}|'"${BASE_USER}"'|g' /home/"${BASE_USER}"/printer_data/systemd/klipper.env
 chown -R "${BASE_USER}":"${BASE_USER}" /home/"${BASE_USER}"/printer_data/systemd/klipper.env
 systemctl_if_exists enable klipper.service
