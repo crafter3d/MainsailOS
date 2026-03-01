@@ -1,12 +1,9 @@
 name: "Release"
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release-Version (Format: X.Y.Z or X.Y.Z-alpha.N)'
-        type: string
-        required: false
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
 
 jobs:
   prepare-release:
@@ -20,55 +17,28 @@ jobs:
           ref: develop
           fetch-depth: 0
 
-      - name: "🔎 Check release number"
-        run: |
-          VERSION="${{ github.event.inputs.version }}"
-          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
-            echo "::error::Version '$VERSION' is not SemVer compliant. Required format: X.Y.Z or X.Y.Z-alpha.N"
-            exit 1
-          fi
-
-          echo "Version '$VERSION' is SemVer compliant."
-
       - name: "Get latest tag"
         id: latest_tag
         shell: bash
         run: |
-          echo "TAG_NAME=$(git describe --tags $(git rev-list --tags --max-count=1))" >> $GITHUB_OUTPUT
-
-      - name: "Setup git config"
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-      - name: "Update VERSION file"
-        run: |
-          echo "${{ github.event.inputs.version }}" > VERSION
-          git add VERSION
-          git commit -m "chore: bump version to v${{ github.event.inputs.version }}"
-          git push
-
-      - name: "Push tag"
-        run: |
-          git tag -a ${{ github.event.inputs.version }} -m "${{ github.event.inputs.version }}"
-          git push origin ${{ github.event.inputs.version }}
+          echo "TAG_NAME=$(git tag --sort=-creatordate | grep -v '^${{ github.ref_name }}$' | head -1)" >> $GITHUB_OUTPUT
 
       - name: "Generate a changelog"
         uses: orhun/git-cliff-action@v4
         id: changelog
         with:
           config: cliff-release.toml
-          args: ${{ steps.latest_tag.outputs.TAG_NAME }}..HEAD
+          args: ${{ steps.latest_tag.outputs.TAG_NAME }}..${{ github.ref_name }}
 
       - name: "Create Release"
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.event.inputs.version }}
-          name: MainsailOS ${{ github.event.inputs.version }}
+          tag_name: ${{ github.ref_name }}
+          name: MainsailOS ${{ github.ref_name }}
           body: ${{ steps.changelog.outputs.content }}
           draft: true
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   generate-matrix:
@@ -297,13 +267,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release edit "${{ github.event.inputs.version }}" --draft=false
+        run: gh release edit "${{ github.ref_name }}" --draft=false
 
   update-rpi-imager:
     needs: [ finish-release ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
     steps:
       - name: "📥 Checkout"
         uses: actions/checkout@v4
@@ -312,7 +283,7 @@ jobs:
         uses: robinraju/release-downloader@v1
         with:
           repository: ${{ github.repository }}
-          tag: ${{ github.event.inputs.version }}
+          tag: ${{ github.ref_name }}
           fileName: "*.json"
           out-file-path: "downloads"
 
@@ -342,13 +313,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ github.event.inputs.version }}" "rpi-imager.json" --clobber
+          gh release upload "${{ github.ref_name }}" "rpi-imager.json" --clobber
 
-      - name: "📦 Prepare GitHub Pages artifacts"
+      - name: "🔧 Move in seperate dir"
+        if: ${{ github.repository_owner == 'crafter3d' }}
         run: |
           mkdir -p upload
           mv rpi-imager.json ./upload
-          mv rpi-images.json ./upload
 
           if [ -f "rpi-imager.png" ]; then
             cp "rpi-imager.png" ./upload/rpi-imager.png
@@ -362,7 +333,7 @@ jobs:
           fi
 
       - name: "🚀 Publish GitHub Pages"
-        if: ${{ github.repository_owner == 'Mainsail-Crew' }}
+        if: ${{ github.repository_owner == 'crafter3d' }}
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
