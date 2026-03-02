@@ -244,7 +244,10 @@ fix_cn_links() {
 
 main() {
 local cmdltxt
-cmdltxt="/boot/cmdline.txt"
+cmdltxt="/boot/firmware/cmdline.txt"
+if [[ ! -f "${cmdltxt}" ]]; then
+    cmdltxt="/boot/cmdline.txt"
+fi
 
 ## Make sure init_resize.sh and firstrun.sh are finished
 if [[ "$(grep -c "init" "${cmdltxt}")" != "0" ]] && \
@@ -266,11 +269,6 @@ if [[ "${DEFAULT_USER}" == "crafter3d" ]]; then
     if [[ "${KS_INSTALLED}" = "1" ]]; then
         echo -e "${WHITE}Enabling KlipperScreen service ...${NOC}"
         systemctl enable --now KlipperScreen.service || true
-    fi
-    ## If crafter3d has a password set, Pi Imager was used → suppress the first-boot wizard
-    if passwd -S crafter3d 2>/dev/null | grep -qE '^crafter3d P '; then
-        rm -f "/home/crafter3d/.crafter3d_firstboot_needed"
-        systemctl disable crafter3d-firstboot.service 2>/dev/null || true
     fi
     echo -e "[${YEL}SKIPPED${NOC}] \
     ${WHITE}User is ${DEFAULT_USER}! Nothing to do ...${NOC}"
@@ -352,9 +350,6 @@ echo -e "${WHITE}Waiting 30 seconds for service restart completed ...${NOC}"
 sleep 30
 ## Cleanup
 echo -e "${WHITE}Cleanup files, remove postrename ...${NOC}"
-## Pi Imager customization ran (user was renamed) — wizard must not run
-systemctl disable crafter3d-firstboot.service 2>/dev/null || true
-rm -f "/home/crafter3d/.crafter3d_firstboot_needed"
 cleanup
 sleep 2
 ## reboot system

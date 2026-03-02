@@ -59,11 +59,10 @@ if [[ -f "${MOONRAKER_CONFIG}" && -f "${UPDATE_FRAGMENT}" ]]; then
 fi
 
 ########################################
-# Ship service disabled — enable post-boot via:
-#   sudo systemctl enable --now KlipperScreen.service
+# Enable KlipperScreen by default      #
 ########################################
 
-systemctl_if_exists disable KlipperScreen.service
+systemctl_if_exists enable KlipperScreen.service
 
 ########################################
 # Deliver baseline KlipperScreen config #

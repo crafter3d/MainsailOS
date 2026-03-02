@@ -14,42 +14,13 @@ install_cleanup_trap
 source /files/00-config
 
 ########################################
-# Install dependencies                 #
-########################################
-
-# Ensure whiptail is available. On Debian/Armbian this is provided by
-# the `whiptail` package (not `newt`). Keep a `newt` fallback for images
-# where that package name exists.
-if ! command -v whiptail >/dev/null 2>&1; then
-	if ! apt-get install --yes --no-install-recommends whiptail; then
-		apt-get install --yes --no-install-recommends newt
-	fi
-fi
-
-########################################
-# Install wizard script                #
-########################################
-
-cp /files/crafter3d-firstboot /usr/local/bin/crafter3d-firstboot
-chmod 0755 /usr/local/bin/crafter3d-firstboot
-
-########################################
-# Install systemd service              #
-########################################
-
-cp /files/crafter3d-firstboot.service /etc/systemd/system/crafter3d-firstboot.service
-systemctl_if_exists enable crafter3d-firstboot.service
-
-########################################
-# Drop marker so the wizard knows it   #
-# is a non-customized (raw-flash) boot #
+# First-boot wizard DISABLED           #
 #                                      #
-# Pi Imager firstrun.sh does NOT       #
-# delete this file, so if the marker   #
-# still exists at first boot AND the   #
-# crafter3d user has no password it    #
-# means this image was not customised. #
+# SSH and KlipperScreen are now        #
+# enabled at build time, default creds #
+# are baked in (crafter3d/crafter3d),  #
+# so the interactive wizard is no      #
+# longer needed.                       #
 ########################################
 
-touch "/home/${BASE_USER}/.crafter3d_firstboot_needed"
-chown "${BASE_USER}:${BASE_USER}" "/home/${BASE_USER}/.crafter3d_firstboot_needed"
+echo "First-boot wizard skipped — SSH & KlipperScreen enabled at build time."
