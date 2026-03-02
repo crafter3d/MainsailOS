@@ -250,8 +250,11 @@ if [[ ! -f "${cmdltxt}" ]]; then
 fi
 
 ## Make sure init_resize.sh and firstrun.sh are finished
-if [[ "$(grep -c "init" "${cmdltxt}")" != "0" ]] && \
-[[ "$(grep -c "systemd.run.*" "${cmdltxt}")" != "0" ]]; then
+## grep returns exit 1 on no match; protect against set -e
+local init_count systemd_count
+init_count="$(grep -c 'init=' "${cmdltxt}" 2>/dev/null || true)"
+systemd_count="$(grep -c 'systemd\.run' "${cmdltxt}" 2>/dev/null || true)"
+if [[ "${init_count}" != "0" ]] && [[ "${systemd_count}" != "0" ]]; then
     echo -e "[${RED}ERROR${NOC}] \
     ${WHITE}Sdcard resize and firstrun are not finished yet ... [ABORT]${NOC}"
     ## Make sure not failing rc.local

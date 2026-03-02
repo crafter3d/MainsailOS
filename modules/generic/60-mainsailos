@@ -86,3 +86,19 @@ echo "Setting default locale to en_US.UTF-8"
 sed -i 's/^# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen en_US.UTF-8
 update-locale LANG=en_US.UTF-8
+
+########################################
+# Disable Raspberry Pi OS userconf     #
+# service to prevent login blocking on #
+# raw-flash boots (user already exists)#
+########################################
+
+if [[ -f /etc/systemd/system/multi-user.target.wants/userconfig.service ]] || \
+   systemctl list-unit-files userconfig.service &>/dev/null; then
+    echo "Disabling userconfig.service (user already provisioned)"
+    systemctl_if_exists disable userconfig.service
+fi
+if systemctl list-unit-files cancel-rename.service &>/dev/null; then
+    echo "Disabling cancel-rename.service"
+    systemctl_if_exists disable cancel-rename.service
+fi
