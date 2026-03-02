@@ -2,6 +2,15 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.2](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.2) - 2026-03-02
+### Bug Fixes and Improvements
+
+- Fix bugs and configs on firstboot
+
+### Other
+
+- Bump version
+
 ## [2.3.1](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.1) - 2026-03-01
 ### Other
 
