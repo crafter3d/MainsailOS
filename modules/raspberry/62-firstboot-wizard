@@ -17,8 +17,14 @@ source /files/00-config
 # Install dependencies                 #
 ########################################
 
-# whiptail is provided by newt, pre-installed on RPi OS Lite
-apt-get install --yes --no-install-recommends newt
+# Ensure whiptail is available. On Debian/Armbian this is provided by
+# the `whiptail` package (not `newt`). Keep a `newt` fallback for images
+# where that package name exists.
+if ! command -v whiptail >/dev/null 2>&1; then
+	if ! apt-get install --yes --no-install-recommends whiptail; then
+		apt-get install --yes --no-install-recommends newt
+	fi
+fi
 
 ########################################
 # Install wizard script                #
