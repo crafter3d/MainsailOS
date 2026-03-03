@@ -2,6 +2,16 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.3](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.3) - 2026-03-03
+### Bug Fixes and Improvements
+
+- Default the image to come ready with ssh and KlipperScreen
+- Review and fixes
+
+### Other
+
+- Bump version
+
 ## [2.3.2](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.2) - 2026-03-02
 ### Bug Fixes and Improvements
 
