@@ -29,9 +29,33 @@ NOC="\e[0m"
 ### Setup
 SERVICES=(moonraker klipper nginx sonar crowsnest)
 SYSTEMD_DIR="/etc/systemd/system"
-DEFAULT_USER="$(grep "1000" /etc/passwd | awk -F ':' '{print $1}')"
 # Username baked into the image at build time; used as the source in rename operations
 BUILD_USER="crafter3d"
+
+detect_default_user() {
+    local user_by_uid user_first_regular
+
+    if id -u "${BUILD_USER}" &> /dev/null; then
+        echo "${BUILD_USER}"
+        return
+    fi
+
+    user_by_uid="$(awk -F ':' '$3 == 1000 { print $1; exit }' /etc/passwd)"
+    if [[ -n "${user_by_uid}" ]]; then
+        echo "${user_by_uid}"
+        return
+    fi
+
+    user_first_regular="$(awk -F ':' '$3 >= 1000 && $1 != "nobody" { print $1; exit }' /etc/passwd)"
+    if [[ -n "${user_first_regular}" ]]; then
+        echo "${user_first_regular}"
+        return
+    fi
+
+    echo "${BUILD_USER}"
+}
+
+DEFAULT_USER="$(detect_default_user)"
 
 ### KlipperScreen workaround
 KS_INSTALLED="$(find /home/"${DEFAULT_USER}" -name "KlipperScreen" | wc -l)"
@@ -176,7 +200,7 @@ ensure_cn_runtime_files() {
 }
 
 patch_unresolved_baseuser_placeholders() {
-    local ngf
+    local ngf service_file env_file
     ngf="/etc/nginx/sites-available/mainsail"
 
     if [[ -f "${ngf}" ]]; then
@@ -187,9 +211,50 @@ patch_unresolved_baseuser_placeholders() {
         sed -i 's|${BASE_USER}|'"${DEFAULT_USER}"'|g' "${SYSTEMD_DIR}/klipper.service"
     fi
 
+    if [[ -f "${SYSTEMD_DIR}/moonraker.service" ]]; then
+        sed -i 's|${BASE_USER}|'"${DEFAULT_USER}"'|g' "${SYSTEMD_DIR}/moonraker.service"
+    fi
+
     if [[ -f "/home/${DEFAULT_USER}/printer_data/systemd/klipper.env" ]]; then
         sed -i 's|${BASE_USER}|'"${DEFAULT_USER}"'|g' "/home/${DEFAULT_USER}/printer_data/systemd/klipper.env"
     fi
+
+    if [[ -f "/home/${DEFAULT_USER}/printer_data/systemd/moonraker.env" ]]; then
+        sed -i 's|${BASE_USER}|'"${DEFAULT_USER}"'|g' "/home/${DEFAULT_USER}/printer_data/systemd/moonraker.env"
+    fi
+
+    # Normalize all managed service files: fix stale /home/pi, /home/${BUILD_USER},
+    # unresolved ${BASE_USER} placeholders, and force the correct User= line.
+    for service_file in \
+        "${SYSTEMD_DIR}/klipper.service" \
+        "${SYSTEMD_DIR}/moonraker.service" \
+        "${SYSTEMD_DIR}/crowsnest.service" \
+        "${SYSTEMD_DIR}/sonar.service" \
+        "${SYSTEMD_DIR}/KlipperScreen.service"; do
+        if [[ -f "${service_file}" ]]; then
+            sed -i "s|/home/pi/|/home/${DEFAULT_USER}/|g" "${service_file}"
+            sed -i "s|/home/${BUILD_USER}/|/home/${DEFAULT_USER}/|g" "${service_file}"
+            sed -i 's|${BASE_USER}|'"${DEFAULT_USER}"'|g' "${service_file}"
+            sed -i "s|^User=.*$|User=${DEFAULT_USER}|" "${service_file}"
+            sed -i "s|^WorkingDirectory=/home/pi/|WorkingDirectory=/home/${DEFAULT_USER}/|g" "${service_file}"
+        fi
+    done
+
+    # Normalize all managed environment files.
+    local env_search_dirs=(
+        "/home/${DEFAULT_USER}/printer_data/systemd"
+        "/home/${BUILD_USER}/printer_data/systemd"
+        "/home/pi/printer_data/systemd"
+    )
+    for env_dir in "${env_search_dirs[@]}"; do
+        if [[ -d "${env_dir}" ]]; then
+            while IFS= read -r -d '' env_file; do
+                sed -i "s|/home/pi/|/home/${DEFAULT_USER}/|g" "${env_file}"
+                sed -i "s|/home/${BUILD_USER}/|/home/${DEFAULT_USER}/|g" "${env_file}"
+                sed -i 's|${BASE_USER}|'"${DEFAULT_USER}"'|g' "${env_file}"
+            done < <(find "${env_dir}" -maxdepth 1 -name '*.env' -print0 2>/dev/null)
+        fi
+    done
 }
 
 ## Fix broken links
@@ -267,7 +332,9 @@ if [[ "${DEFAULT_USER}" == "crafter3d" ]]; then
     systemctl daemon-reload
     systemctl restart nginx || true
     systemctl restart klipper || true
+    systemctl restart moonraker || true
     systemctl restart crowsnest || true
+    systemctl restart sonar || true
     ## Enable KlipperScreen if it was installed at build time
     if [[ "${KS_INSTALLED}" = "1" ]]; then
         echo -e "${WHITE}Enabling KlipperScreen service ...${NOC}"

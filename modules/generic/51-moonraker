@@ -52,7 +52,12 @@ create_user_directories
 
 echo "Execute installer"
 pushd "moonraker" &> /dev/null || exit 1
-sudo -u "${BASE_USER}" ./scripts/install-moonraker.sh -s -z
+# Explicitly set USER and HOME so the upstream installer templates the correct
+# username into moonraker.service and moonraker.env.  sudo -u changes the
+# effective uid but does NOT reliably update these env vars inside a chroot.
+sudo -u "${BASE_USER}" \
+    env USER="${BASE_USER}" HOME="/home/${BASE_USER}" \
+    ./scripts/install-moonraker.sh -s -z
 popd &> /dev/null || exit 1
 
 ########################################
