@@ -2,6 +2,15 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.4](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.4) - 2026-03-03
+### Bug Fixes and Improvements
+
+- Systemd services renamings
+
+### Other
+
+- Bump version
+
 ## [2.3.3](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.3) - 2026-03-03
 ### Bug Fixes and Improvements
 
