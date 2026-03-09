@@ -1,0 +1,58 @@
+# ------------------------------------------------------
+#  Crafter3D Plymouth Boot Splash
+#  Uses the Plymouth 'script' plugin.
+#  Displays a centred logo on a dark background
+#  with a white progress bar at 75% of screen height.
+# ------------------------------------------------------
+
+# Dark background
+Window.SetBackgroundTopColor(0.07, 0.07, 0.07);
+Window.SetBackgroundBottomColor(0.07, 0.07, 0.07);
+
+# -- Logo ----------------------------------------------
+logo_image = Image("logo.png");
+
+# Scale logo to 35% of screen width, maintaining aspect ratio
+target_w   = Math.Int(Window.GetWidth() * 0.35);
+scale      = target_w / logo_image.GetWidth();
+target_h   = Math.Int(logo_image.GetHeight() * scale);
+logo_image = Image.Scale(logo_image, target_w, target_h);
+
+logo_sprite = Sprite(logo_image);
+logo_sprite.SetX(Math.Int(Window.GetWidth()  / 2 - target_w / 2));
+logo_sprite.SetY(Math.Int(Window.GetHeight() / 2 - target_h / 2 - 30));
+
+# -- Progress bar --------------------------------------
+BAR_WIDTH  = Math.Int(Window.GetWidth() * 0.50);
+BAR_HEIGHT = 6;
+BAR_X      = Math.Int((Window.GetWidth() - BAR_WIDTH) / 2);
+BAR_Y      = Math.Int( Window.GetHeight() * 0.75);
+
+# Background track (dark gray)
+bar_bg = Sprite(Image.NewWithColor(BAR_WIDTH, BAR_HEIGHT, 0.22, 0.22, 0.22, 1.0));
+bar_bg.SetX(BAR_X);
+bar_bg.SetY(BAR_Y);
+bar_bg.SetZ(1);
+
+# Foreground fill - starts empty, grows as boot progresses
+bar_fill = Sprite();
+bar_fill.SetX(BAR_X);
+bar_fill.SetY(BAR_Y);
+bar_fill.SetZ(2);
+
+fun progress_callback(progress) {
+    w = Math.Int(BAR_WIDTH * progress);
+    if (w < 1) w = 1;
+    bar_fill.SetImage(Image.NewWithColor(w, BAR_HEIGHT, 0.93, 0.93, 0.93, 1.0));
+}
+
+Plymouth.SetBootProgressFunction(progress_callback);
+
+fun quit_callback() {
+    logo_sprite.SetOpacity(0);
+    bar_bg.SetOpacity(0);
+    bar_fill.SetOpacity(0);
+}
+
+Plymouth.SetClientDisconnectFunction(quit_callback);
+Plymouth.SetQuitFunction(quit_callback);

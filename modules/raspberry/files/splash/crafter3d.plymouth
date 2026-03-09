@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Crafter3D
+Description=Crafter3D branded boot splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/crafter3d
+ScriptFile=/usr/share/plymouth/themes/crafter3d/crafter3d.script

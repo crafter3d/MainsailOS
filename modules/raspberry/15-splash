@@ -1,0 +1,83 @@
+#!/bin/bash
+set -xe
+export LC_ALL=C
+
+########################################
+# Functions and Basic Configuration    #
+########################################
+
+source /common.sh
+install_cleanup_trap
+source /files/00-config
+
+########################################
+# Configuration                        #
+########################################
+
+THEME_DIR="/usr/share/plymouth/themes/crafter3d"
+
+########################################
+# Install Plymouth                     #
+########################################
+
+echo "Installing Plymouth"
+apt-get install --yes plymouth plymouth-themes
+
+########################################
+# Deploy Crafter3D theme               #
+########################################
+
+echo "Deploying Crafter3D Plymouth theme"
+mkdir -p "${THEME_DIR}"
+cp /files/splash/crafter3d.plymouth "${THEME_DIR}/"
+cp /files/splash/crafter3d.script   "${THEME_DIR}/"
+cp /files/splash/logo.png          "${THEME_DIR}/"
+
+########################################
+# Set as default Plymouth theme and    #
+# rebuild initramfs to embed Plymouth  #
+########################################
+
+echo "Setting Crafter3D as default Plymouth theme"
+if ! plymouth-set-default-theme crafter3d; then
+    echo "Crafter3D theme activation failed, falling back to spinner"
+    plymouth-set-default-theme spinner
+fi
+
+echo "Rebuilding initramfs to embed Plymouth"
+update-initramfs -u
+
+# On Raspberry Pi OS Bookworm the firmware reads the boot partition (BOOT_PATH).
+# Copy initramfs there after rebuild to avoid stale boot artifacts.
+KERNEL_VER=$(ls /boot/vmlinuz-* 2>/dev/null | sort -V | tail -1 | sed 's|/boot/vmlinuz-||')
+if [[ -n "${KERNEL_VER}" ]]; then
+    INITRD_SRC="/boot/initrd.img-${KERNEL_VER}"
+    INITRD_DST="${BOOT_PATH}/initrd.img"
+    if [[ -f "${INITRD_SRC}" ]]; then
+        echo "Copying initramfs to boot partition: ${INITRD_DST}"
+        cp -f "${INITRD_SRC}" "${INITRD_DST}"
+    fi
+fi
+
+########################################
+# Tell firmware to load initramfs      #
+########################################
+
+if ! grep -q "^initramfs" "${BOOT_PATH}/config.txt"; then
+    echo "Adding initramfs directive to config.txt"
+    echo "initramfs initrd.img" >> "${BOOT_PATH}/config.txt"
+fi
+
+########################################
+# Configure kernel cmdline for splash  #
+########################################
+
+# quiet      - suppress kernel log messages on screen
+# splash     - activate Plymouth
+# plymouth.ignore-serial-consoles - keep splash even when UART is enabled
+# logo.nologo - hide the kernel's default Raspberry Pi logo
+if ! grep -q "splash" "${BOOT_PATH}/cmdline.txt"; then
+    echo "Adding splash parameters to cmdline.txt"
+    sed -i 's/$/ quiet splash plymouth.ignore-serial-consoles logo.nologo/' \
+        "${BOOT_PATH}/cmdline.txt"
+fi

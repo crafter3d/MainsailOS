@@ -62,3 +62,5 @@ dtparam=i2c_arm=on
 ####################################################
 
 [all]
+## Disable firmware rainbow splash - replaced by Plymouth boot splash
+disable_splash=1
