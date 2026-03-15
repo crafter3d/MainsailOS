@@ -2,6 +2,12 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.5](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.5) - 2026-03-15
+### Bug Fixes and Improvements
+
+- Add Crafter3D splash screen
+- Link klipper version with crafter3d firmware
+
 ## [2.3.4](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.4) - 2026-03-03
 ### Bug Fixes and Improvements
 
