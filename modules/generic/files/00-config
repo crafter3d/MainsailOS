@@ -18,7 +18,9 @@ export BASE_USER=crafter3d
 export DIST_NAME=MainsailOS
 export HOSTNAME=crafter3d
 
-# Klipper install source and pinned revision.
+# Klipper install source and fallback pinned revision.
+# Preferred source of truth is the published firmware manifest fetched during image build.
+# Keep this fallback ref updated periodically so offline builds do not drift too far.
 # Keep this ref aligned with flashed MCU firmware revision to avoid host/MCU mismatch.
 export KLIPPER_REPO="https://github.com/Klipper3d/klipper.git"
 export KLIPPER_REF="cf3b0475d"

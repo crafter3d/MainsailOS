@@ -23,6 +23,11 @@ ENV_DIR="/home/${BASE_USER}/klippy-env"
 REPO="${KLIPPER_REPO:-https://github.com/Klipper3d/klipper.git}"
 KLIPPER_PINNED_REF="${KLIPPER_REF:-}"
 
+if [[ -f /tmp/crafter3d-klipper-ref ]]; then
+    KLIPPER_PINNED_REF="$(cat /tmp/crafter3d-klipper-ref)"
+    echo "Using firmware-matched Klipper ref: ${KLIPPER_PINNED_REF}"
+fi
+
 DEPS=(git \
       # Packages for python cffi
       virtualenv python3-dev libffi-dev build-essential \

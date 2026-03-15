@@ -42,3 +42,27 @@ popd &> /dev/null || exit 1
 ########################################
 
 sudo -u "${BASE_USER}" bash "${TARGET_DIR}/scripts/install.sh"
+
+########################################
+# Install firmware build profiles      #
+########################################
+
+install -d -m 0755 /usr/share/crafter3d/firmware/profiles
+cp "${TARGET_DIR}/firmware/profiles/"*.config /usr/share/crafter3d/firmware/profiles/
+
+########################################
+# Install staged firmware artifacts    #
+########################################
+
+STAGE_DIR="/tmp/crafter3d-firmware"
+TARGET_FIRMWARE_DIR="/home/${BASE_USER}/printer_data/firmware"
+
+if [[ -f "${STAGE_DIR}/manifest.json" && -f "${STAGE_DIR}/octopus-f446-usb-can.bin" && -f "${STAGE_DIR}/ebb42-g0b1-can.bin" ]]; then
+    install -d -m 0755 "${TARGET_FIRMWARE_DIR}"
+    install -m 0644 "${STAGE_DIR}/manifest.json" "${TARGET_FIRMWARE_DIR}/manifest.json"
+    install -m 0644 "${STAGE_DIR}/octopus-f446-usb-can.bin" "${TARGET_FIRMWARE_DIR}/octopus-f446-usb-can.bin"
+    install -m 0644 "${STAGE_DIR}/ebb42-g0b1-can.bin" "${TARGET_FIRMWARE_DIR}/ebb42-g0b1-can.bin"
+    chown -R "${BASE_USER}:${BASE_USER}" "${TARGET_FIRMWARE_DIR}"
+else
+    echo "WARNING: staged firmware artifacts missing in ${STAGE_DIR}, skipping firmware artifact installation"
+fi
