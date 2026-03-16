@@ -56,6 +56,7 @@ cp "${TARGET_DIR}/firmware/profiles/"*.config /usr/share/crafter3d/firmware/prof
 
 STAGE_DIR="/tmp/crafter3d-firmware"
 TARGET_FIRMWARE_DIR="/home/${BASE_USER}/printer_data/firmware"
+FALLBACK_FIRMWARE_DIR="${TARGET_DIR}/firmware"
 
 if [[ -f "${STAGE_DIR}/manifest.json" && -f "${STAGE_DIR}/octopus-f446-usb-can.bin" && -f "${STAGE_DIR}/ebb42-g0b1-can.bin" ]]; then
     install -d -m 0755 "${TARGET_FIRMWARE_DIR}"
@@ -63,6 +64,29 @@ if [[ -f "${STAGE_DIR}/manifest.json" && -f "${STAGE_DIR}/octopus-f446-usb-can.b
     install -m 0644 "${STAGE_DIR}/octopus-f446-usb-can.bin" "${TARGET_FIRMWARE_DIR}/octopus-f446-usb-can.bin"
     install -m 0644 "${STAGE_DIR}/ebb42-g0b1-can.bin" "${TARGET_FIRMWARE_DIR}/ebb42-g0b1-can.bin"
     chown -R "${BASE_USER}:${BASE_USER}" "${TARGET_FIRMWARE_DIR}"
+    echo "Installed firmware artifacts from staged latest manifest"
 else
-    echo "WARNING: staged firmware artifacts missing in ${STAGE_DIR}, skipping firmware artifact installation"
+    echo "WARNING: staged firmware artifacts missing in ${STAGE_DIR}; trying fallback firmware artifacts from ${FALLBACK_FIRMWARE_DIR}"
+    install -d -m 0755 "${TARGET_FIRMWARE_DIR}"
+
+    fallback_installed="no"
+
+    if [[ -f "${FALLBACK_FIRMWARE_DIR}/manifest.json" ]]; then
+        install -m 0644 "${FALLBACK_FIRMWARE_DIR}/manifest.json" "${TARGET_FIRMWARE_DIR}/manifest.json"
+        fallback_installed="yes"
+    fi
+
+    for fw in octopus-f446-usb-can.bin ebb42-g0b1-can.bin; do
+        if [[ -f "${FALLBACK_FIRMWARE_DIR}/${fw}" ]]; then
+            install -m 0644 "${FALLBACK_FIRMWARE_DIR}/${fw}" "${TARGET_FIRMWARE_DIR}/${fw}"
+            fallback_installed="yes"
+        fi
+    done
+
+    if [[ "${fallback_installed}" == "yes" ]]; then
+        chown -R "${BASE_USER}:${BASE_USER}" "${TARGET_FIRMWARE_DIR}"
+        echo "Installed fallback firmware artifacts from printer-config repository"
+    else
+        echo "WARNING: no fallback firmware binaries found under ${FALLBACK_FIRMWARE_DIR}"
+    fi
 fi

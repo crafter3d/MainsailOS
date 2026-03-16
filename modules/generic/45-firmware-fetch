@@ -16,14 +16,25 @@ source /files/00-config
 
 MANIFEST_URL="https://crafter3d.github.io/printer-config/firmware/latest/manifest.json"
 STAGE_DIR="/tmp/crafter3d-firmware"
-MANIFEST_PATH="${STAGE_DIR}/manifest.json"
+TMP_STAGE_DIR="/tmp/crafter3d-firmware.new"
+BACKUP_STAGE_DIR="/tmp/crafter3d-firmware.backup"
+MANIFEST_PATH="${TMP_STAGE_DIR}/manifest.json"
 KLIPPER_REF_PATH="/tmp/crafter3d-klipper-ref"
 
 warn_and_exit_success() {
-    echo "WARNING: $1"
+    local reason has_existing_artifacts
+    reason="$1"
+    has_existing_artifacts="no"
+
+    if [[ -f "${STAGE_DIR}/manifest.json" && -f "${STAGE_DIR}/octopus-f446-usb-can.bin" && -f "${STAGE_DIR}/ebb42-g0b1-can.bin" ]]; then
+        has_existing_artifacts="yes"
+    fi
+
+    echo "WARNING: ${reason}"
     echo "Falling back to configured KLIPPER_REF from /files/00-config"
+    echo "Staged firmware artifacts preserved: ${has_existing_artifacts}"
     rm -f "${KLIPPER_REF_PATH}"
-    rm -rf "${STAGE_DIR}"
+    rm -rf "${TMP_STAGE_DIR}" "${BACKUP_STAGE_DIR}"
     exit 0
 }
 
@@ -38,8 +49,8 @@ apt-get install --yes wget jq ca-certificates
 ########################################
 
 rm -f "${KLIPPER_REF_PATH}"
-rm -rf "${STAGE_DIR}"
-mkdir -p "${STAGE_DIR}"
+rm -rf "${TMP_STAGE_DIR}" "${BACKUP_STAGE_DIR}"
+mkdir -p "${TMP_STAGE_DIR}"
 
 if ! wget -qO "${MANIFEST_PATH}" "${MANIFEST_URL}"; then
     warn_and_exit_success "Unable to fetch firmware manifest from ${MANIFEST_URL}"
@@ -70,27 +81,47 @@ if [[ ! "${KLIPPER_SHA}" =~ ^[0-9a-f]{7,40}$ ]]; then
     warn_and_exit_success "Could not parse Klipper SHA from klipper_ref: ${KLIPPER_REF_RAW}"
 fi
 
-printf '%s\n' "${KLIPPER_SHA}" > "${KLIPPER_REF_PATH}"
-
 ########################################
 # Fetch firmware binaries              #
 ########################################
 
-if ! wget -qO "${STAGE_DIR}/octopus-f446-usb-can.bin" "${OCTOPUS_URL}"; then
+if ! wget -qO "${TMP_STAGE_DIR}/octopus-f446-usb-can.bin" "${OCTOPUS_URL}"; then
     warn_and_exit_success "Unable to download octopus_f446_usb_can binary"
 fi
 
-if ! wget -qO "${STAGE_DIR}/ebb42-g0b1-can.bin" "${EBB42_URL}"; then
+if ! wget -qO "${TMP_STAGE_DIR}/ebb42-g0b1-can.bin" "${EBB42_URL}"; then
     warn_and_exit_success "Unable to download ebb42_g0b1_can binary"
 fi
 
-if ! echo "${OCTOPUS_SHA}  ${STAGE_DIR}/octopus-f446-usb-can.bin" | sha256sum -c -; then
+if ! echo "${OCTOPUS_SHA}  ${TMP_STAGE_DIR}/octopus-f446-usb-can.bin" | sha256sum -c -; then
     warn_and_exit_success "Checksum validation failed for octopus-f446-usb-can.bin"
 fi
 
-if ! echo "${EBB42_SHA}  ${STAGE_DIR}/ebb42-g0b1-can.bin" | sha256sum -c -; then
+if ! echo "${EBB42_SHA}  ${TMP_STAGE_DIR}/ebb42-g0b1-can.bin" | sha256sum -c -; then
     warn_and_exit_success "Checksum validation failed for ebb42-g0b1-can.bin"
 fi
+
+########################################
+# Publish validated artifacts          #
+########################################
+
+if [[ -d "${BACKUP_STAGE_DIR}" ]]; then
+    rm -rf "${BACKUP_STAGE_DIR}"
+fi
+
+if [[ -d "${STAGE_DIR}" ]]; then
+    mv "${STAGE_DIR}" "${BACKUP_STAGE_DIR}"
+fi
+
+if ! mv "${TMP_STAGE_DIR}" "${STAGE_DIR}"; then
+    if [[ -d "${BACKUP_STAGE_DIR}" ]]; then
+        mv "${BACKUP_STAGE_DIR}" "${STAGE_DIR}"
+    fi
+    warn_and_exit_success "Unable to atomically publish staged firmware artifacts"
+fi
+
+rm -rf "${BACKUP_STAGE_DIR}"
+printf '%s\n' "${KLIPPER_SHA}" > "${KLIPPER_REF_PATH}"
 
 echo "Firmware manifest and binaries staged in ${STAGE_DIR}"
 echo "Resolved firmware-matched Klipper ref: ${KLIPPER_SHA}"

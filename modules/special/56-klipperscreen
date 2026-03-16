@@ -26,7 +26,7 @@ UPDATE_FRAGMENT="/files/moonraker_klipperscreen.conf"
 # Install dependencies                 #
 ########################################
 
-apt-get install --yes git
+apt-get install --yes git cage
 
 ########################################
 # Clone repository                     #

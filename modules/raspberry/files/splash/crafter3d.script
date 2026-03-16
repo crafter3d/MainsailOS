@@ -1,58 +1,67 @@
 # ------------------------------------------------------
 #  Crafter3D Plymouth Boot Splash
 #  Uses the Plymouth 'script' plugin.
-#  Displays a centred logo on a dark background
-#  with a white progress bar at 75% of screen height.
+#  Displays a centered logo on a dark background
+#  with an 8-frame spinner below it.
 # ------------------------------------------------------
 
-# Dark background
 Window.SetBackgroundTopColor(0.07, 0.07, 0.07);
 Window.SetBackgroundBottomColor(0.07, 0.07, 0.07);
 
 # -- Logo ----------------------------------------------
 logo_image = Image("logo.png");
+logo_target_w = Window.GetWidth() * 0.35;
+logo_scale = logo_target_w / logo_image.GetWidth();
+logo_target_h = logo_image.GetHeight() * logo_scale;
+logo_scaled = logo_image.Scale(logo_target_w, logo_target_h);
 
-# Scale logo to 35% of screen width, maintaining aspect ratio
-target_w   = Math.Int(Window.GetWidth() * 0.35);
-scale      = target_w / logo_image.GetWidth();
-target_h   = Math.Int(logo_image.GetHeight() * scale);
-logo_image = Image.Scale(logo_image, target_w, target_h);
+logo_x = Window.GetWidth() / 2 - logo_target_w / 2;
+logo_y = Window.GetHeight() / 2 - logo_target_h / 2 - 30;
 
-logo_sprite = Sprite(logo_image);
-logo_sprite.SetX(Math.Int(Window.GetWidth()  / 2 - target_w / 2));
-logo_sprite.SetY(Math.Int(Window.GetHeight() / 2 - target_h / 2 - 30));
+logo_sprite = Sprite(logo_scaled);
+logo_sprite.SetX(logo_x);
+logo_sprite.SetY(logo_y);
+logo_sprite.SetZ(1);
 
-# -- Progress bar --------------------------------------
-BAR_WIDTH  = Math.Int(Window.GetWidth() * 0.50);
-BAR_HEIGHT = 6;
-BAR_X      = Math.Int((Window.GetWidth() - BAR_WIDTH) / 2);
-BAR_Y      = Math.Int( Window.GetHeight() * 0.75);
+# -- Spinner frames ------------------------------------
+NUM_FRAMES = 8;
+SPINNER_SIZE = 48;
+spinner_x = Window.GetWidth() / 2 - SPINNER_SIZE / 2;
+spinner_y = logo_y + logo_target_h + 26;
 
-# Background track (dark gray)
-bar_bg = Sprite(Image.NewWithColor(BAR_WIDTH, BAR_HEIGHT, 0.22, 0.22, 0.22, 1.0));
-bar_bg.SetX(BAR_X);
-bar_bg.SetY(BAR_Y);
-bar_bg.SetZ(1);
+spinner_images[0] = Image("spinner-01.png");
+spinner_images[1] = Image("spinner-02.png");
+spinner_images[2] = Image("spinner-03.png");
+spinner_images[3] = Image("spinner-04.png");
+spinner_images[4] = Image("spinner-05.png");
+spinner_images[5] = Image("spinner-06.png");
+spinner_images[6] = Image("spinner-07.png");
+spinner_images[7] = Image("spinner-08.png");
 
-# Foreground fill - starts empty, grows as boot progresses
-bar_fill = Sprite();
-bar_fill.SetX(BAR_X);
-bar_fill.SetY(BAR_Y);
-bar_fill.SetZ(2);
-
-fun progress_callback(progress) {
-    w = Math.Int(BAR_WIDTH * progress);
-    if (w < 1) w = 1;
-    bar_fill.SetImage(Image.NewWithColor(w, BAR_HEIGHT, 0.93, 0.93, 0.93, 1.0));
+for (i = 0; i < NUM_FRAMES; i++) {
+    spinner_sprites[i] = Sprite(spinner_images[i]);
+    spinner_sprites[i].SetX(spinner_x);
+    spinner_sprites[i].SetY(spinner_y);
+    spinner_sprites[i].SetZ(2);
+    spinner_sprites[i].SetOpacity(0);
 }
 
-Plymouth.SetBootProgressFunction(progress_callback);
+spinner_frame = 0;
+spinner_sprites[spinner_frame].SetOpacity(1);
+
+fun refresh_callback() {
+    spinner_sprites[spinner_frame].SetOpacity(0);
+    spinner_frame = (spinner_frame + 1) % NUM_FRAMES;
+    spinner_sprites[spinner_frame].SetOpacity(1);
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);
 
 fun quit_callback() {
     logo_sprite.SetOpacity(0);
-    bar_bg.SetOpacity(0);
-    bar_fill.SetOpacity(0);
+    for (i = 0; i < NUM_FRAMES; i++) {
+        spinner_sprites[i].SetOpacity(0);
+    }
 }
 
-Plymouth.SetClientDisconnectFunction(quit_callback);
 Plymouth.SetQuitFunction(quit_callback);

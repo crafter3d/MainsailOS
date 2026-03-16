@@ -35,11 +35,6 @@ BUILD_USER="crafter3d"
 detect_default_user() {
     local user_by_uid user_first_regular
 
-    if id -u "${BUILD_USER}" &> /dev/null; then
-        echo "${BUILD_USER}"
-        return
-    fi
-
     user_by_uid="$(awk -F ':' '$3 == 1000 { print $1; exit }' /etc/passwd)"
     if [[ -n "${user_by_uid}" ]]; then
         echo "${user_by_uid}"
@@ -58,7 +53,10 @@ detect_default_user() {
 DEFAULT_USER="$(detect_default_user)"
 
 ### KlipperScreen workaround
-KS_INSTALLED="$(find /home/"${DEFAULT_USER}" -name "KlipperScreen" | wc -l)"
+KS_INSTALLED="0"
+if [[ -d "/home/${DEFAULT_USER}/KlipperScreen" ]] || [[ -d "/home/${BUILD_USER}/KlipperScreen" ]]; then
+    KS_INSTALLED="1"
+fi
 if [[ "${KS_INSTALLED}" = "1" ]]; then
     SERVICES+=(KlipperScreen)
 fi
@@ -113,6 +111,32 @@ change_env_user() {
     for ef in ${env_files}; do
         sed -i "s|${BUILD_USER}|${DEFAULT_USER}|g" "${env_path}/${ef}"
     done
+}
+
+relocate_home() {
+    if [[ "${DEFAULT_USER}" == "${BUILD_USER}" ]]; then
+        return
+    fi
+
+    if [[ -d "/home/${BUILD_USER}" ]] && [[ ! -d "/home/${DEFAULT_USER}/klipper" ]]; then
+        echo -e "${WHITE}Relocating files from /home/${BUILD_USER} to /home/${DEFAULT_USER} ...${NOC}"
+        cp -a "/home/${BUILD_USER}/." "/home/${DEFAULT_USER}/"
+        chown -R "${DEFAULT_USER}:${DEFAULT_USER}" "/home/${DEFAULT_USER}"
+    fi
+}
+
+remove_build_user() {
+    if [[ "${DEFAULT_USER}" == "${BUILD_USER}" ]]; then
+        return
+    fi
+
+    if id -u "${BUILD_USER}" &> /dev/null; then
+        userdel -r "${BUILD_USER}" 2>/dev/null || true
+        if id -u "${BUILD_USER}" &> /dev/null; then
+            userdel "${BUILD_USER}" 2>/dev/null || true
+            rm -rf "/home/${BUILD_USER}" 2>/dev/null || true
+        fi
+    fi
 }
 
 relocate_venv() {
@@ -314,6 +338,8 @@ if [[ ! -f "${cmdltxt}" ]]; then
     cmdltxt="/boot/cmdline.txt"
 fi
 
+exec &> >(tee -a /var/log/postrename.log)
+
 ## Make sure init_resize.sh and firstrun.sh are finished
 ## grep returns exit 1 on no match; protect against set -e
 local init_count systemd_count
@@ -325,8 +351,8 @@ if [[ "${init_count}" != "0" ]] && [[ "${systemd_count}" != "0" ]]; then
     ## Make sure not failing rc.local
     return 0
 fi
-## Abort if user = crafter3d (default; already set up for this user)
-if [[ "${DEFAULT_USER}" == "crafter3d" ]]; then
+## Abort if user = build user (default; already set up for this user)
+if [[ "${DEFAULT_USER}" == "${BUILD_USER}" ]]; then
     patch_unresolved_baseuser_placeholders
     ensure_cn_runtime_files
     systemctl daemon-reload
@@ -347,6 +373,10 @@ if [[ "${DEFAULT_USER}" == "crafter3d" ]]; then
 fi
 
 echo -e "\n\t${WHITE}Trying to fix user rename ...${NOC}"
+## Relocate home content before patching services and envs.
+echo -en "${WHITE}Relocating user home content ...${NOC}\r"
+relocate_home
+echo -e "${WHITE}Relocating user home content ...${NOC}[${GRE}OK${NOC}]"
 ## Stop services
 echo -en "${WHITE}Stopping all related services ...${NOC}\r"
 stop_services
@@ -418,6 +448,10 @@ start_services
 ## wait 30sec to come up
 echo -e "${WHITE}Waiting 30 seconds for service restart completed ...${NOC}"
 sleep 30
+## remove stale build user after successful migration
+echo -en "${WHITE}Removing stale build user ...${NOC}\r"
+remove_build_user
+echo -e "${WHITE}Removing stale build user ...${NOC}[${GRE}OK${NOC}]"
 ## Cleanup
 echo -e "${WHITE}Cleanup files, remove postrename ...${NOC}"
 cleanup

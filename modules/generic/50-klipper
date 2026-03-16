@@ -26,6 +26,12 @@ KLIPPER_PINNED_REF="${KLIPPER_REF:-}"
 if [[ -f /tmp/crafter3d-klipper-ref ]]; then
     KLIPPER_PINNED_REF="$(cat /tmp/crafter3d-klipper-ref)"
     echo "Using firmware-matched Klipper ref: ${KLIPPER_PINNED_REF}"
+else
+    if [[ -n "${KLIPPER_PINNED_REF}" ]]; then
+        echo "Firmware-matched Klipper ref unavailable, using configured KLIPPER_REF fallback: ${KLIPPER_PINNED_REF}"
+    else
+        echo "No Klipper ref pin configured; using repository default branch"
+    fi
 fi
 
 DEPS=(git \

@@ -32,6 +32,28 @@ mkdir -p "${THEME_DIR}"
 cp /files/splash/crafter3d.plymouth "${THEME_DIR}/"
 cp /files/splash/crafter3d.script   "${THEME_DIR}/"
 cp /files/splash/logo.png          "${THEME_DIR}/"
+cp /files/splash/spinner-*.png     "${THEME_DIR}/"
+
+########################################
+# Ensure DRM modules in initramfs      #
+########################################
+
+for mod in drm vc4 v3d; do
+    if ! grep -qx "${mod}" /etc/initramfs-tools/modules 2>/dev/null; then
+        echo "${mod}" >> /etc/initramfs-tools/modules
+    fi
+done
+
+########################################
+# Explicit Plymouth daemon config       #
+########################################
+
+cat > /etc/plymouth/plymouthd.conf << 'EOF'
+[Daemon]
+Theme=crafter3d
+ShowDelay=0
+DeviceTimeout=8
+EOF
 
 ########################################
 # Set as default Plymouth theme and    #
@@ -39,34 +61,20 @@ cp /files/splash/logo.png          "${THEME_DIR}/"
 ########################################
 
 echo "Setting Crafter3D as default Plymouth theme"
-if ! plymouth-set-default-theme crafter3d; then
+if ! plymouth-set-default-theme crafter3d -R; then
     echo "Crafter3D theme activation failed, falling back to spinner"
-    plymouth-set-default-theme spinner
-fi
-
-echo "Rebuilding initramfs to embed Plymouth"
-update-initramfs -u
-
-# On Raspberry Pi OS Bookworm the firmware reads the boot partition (BOOT_PATH).
-# Copy initramfs there after rebuild to avoid stale boot artifacts.
-KERNEL_VER=$(ls /boot/vmlinuz-* 2>/dev/null | sort -V | tail -1 | sed 's|/boot/vmlinuz-||')
-if [[ -n "${KERNEL_VER}" ]]; then
-    INITRD_SRC="/boot/initrd.img-${KERNEL_VER}"
-    INITRD_DST="${BOOT_PATH}/initrd.img"
-    if [[ -f "${INITRD_SRC}" ]]; then
-        echo "Copying initramfs to boot partition: ${INITRD_DST}"
-        cp -f "${INITRD_SRC}" "${INITRD_DST}"
-    fi
+    plymouth-set-default-theme spinner -R
 fi
 
 ########################################
-# Tell firmware to load initramfs      #
+# Adjust firmware display setup        #
 ########################################
 
-if ! grep -q "^initramfs" "${BOOT_PATH}/config.txt"; then
-    echo "Adding initramfs directive to config.txt"
-    echo "initramfs initrd.img" >> "${BOOT_PATH}/config.txt"
-fi
+# Raspberry Pi firmware should initialize display for KMS
+sed -i '/^disable_fw_kms_setup=1$/d' "${BOOT_PATH}/config.txt"
+
+# auto_initramfs=1 in Bookworm handles initramfs naming automatically
+sed -i '/^initramfs[[:space:]].*/d' "${BOOT_PATH}/config.txt"
 
 ########################################
 # Configure kernel cmdline for splash  #
@@ -80,4 +88,11 @@ if ! grep -q "splash" "${BOOT_PATH}/cmdline.txt"; then
     echo "Adding splash parameters to cmdline.txt"
     sed -i 's/$/ quiet splash plymouth.ignore-serial-consoles logo.nologo/' \
         "${BOOT_PATH}/cmdline.txt"
+fi
+
+sed -i 's/[[:space:]]video=HDMI-A-1:[^[:space:]]*//g' "${BOOT_PATH}/cmdline.txt"
+
+if ! grep -q 'video=HDMI-A-1:800x480M@60' "${BOOT_PATH}/cmdline.txt"; then
+    echo "Adding HDMI timing override for 800x480 display"
+    sed -i 's/$/ video=HDMI-A-1:800x480M@60/' "${BOOT_PATH}/cmdline.txt"
 fi
