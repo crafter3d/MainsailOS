@@ -2,6 +2,11 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.6](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.6) - 2026-03-16
+### Bug Fixes and Improvements
+
+- Fix splash screen, postrename fails and klipperscreen missing deps
+
 ## [2.3.5](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.5) - 2026-03-15
 ### Bug Fixes and Improvements
 
