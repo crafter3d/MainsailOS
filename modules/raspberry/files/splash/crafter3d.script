@@ -49,10 +49,17 @@ for (i = 0; i < NUM_FRAMES; i++) {
 spinner_frame = 0;
 spinner_sprites[spinner_frame].SetOpacity(1);
 
+tick = 0;
+TICKS_PER_FRAME = 5;
+
 fun refresh_callback() {
-    spinner_sprites[spinner_frame].SetOpacity(0);
-    spinner_frame = (spinner_frame + 1) % NUM_FRAMES;
-    spinner_sprites[spinner_frame].SetOpacity(1);
+    tick = tick + 1;
+    if (tick >= TICKS_PER_FRAME) {
+        tick = 0;
+        spinner_sprites[spinner_frame].SetOpacity(0);
+        spinner_frame = (spinner_frame + 1) % NUM_FRAMES;
+        spinner_sprites[spinner_frame].SetOpacity(1);
+    }
 }
 
 Plymouth.SetRefreshFunction(refresh_callback);

@@ -59,6 +59,23 @@ if [[ -f "${MOONRAKER_CONFIG}" && -f "${UPDATE_FRAGMENT}" ]]; then
 fi
 
 ########################################
+# Fix generated service file           #
+########################################
+
+SERVICE_FILE="/etc/systemd/system/KlipperScreen.service"
+if [[ -f "${SERVICE_FILE}" ]]; then
+    # Fix user references (upstream defaults to the invoking user / pi)
+    sed -i "s|User=pi|User=${BASE_USER}|g" "${SERVICE_FILE}"
+    sed -i "s|/home/pi/|/home/${BASE_USER}/|g" "${SERVICE_FILE}"
+
+    # Force cage backend (we install cage in this module)
+    sed -i 's|BACKEND=X|BACKEND=cage|g' "${SERVICE_FILE}"
+
+    # Fix PAMName to use the actual username instead of %u specifier
+    sed -i "s|^PAMName=.*$|PAMName=${BASE_USER}|" "${SERVICE_FILE}"
+fi
+
+########################################
 # Enable KlipperScreen by default      #
 ########################################
 

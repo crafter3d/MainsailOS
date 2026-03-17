@@ -261,6 +261,12 @@ patch_unresolved_baseuser_placeholders() {
             sed -i 's|${BASE_USER}|'"${DEFAULT_USER}"'|g' "${service_file}"
             sed -i "s|^User=.*$|User=${DEFAULT_USER}|" "${service_file}"
             sed -i "s|^WorkingDirectory=/home/pi/|WorkingDirectory=/home/${DEFAULT_USER}/|g" "${service_file}"
+
+            # KlipperScreen-specific: fix PAMName and BACKEND
+            if [[ "${service_file}" == *"KlipperScreen"* ]]; then
+                sed -i "s|^PAMName=.*$|PAMName=${DEFAULT_USER}|" "${service_file}"
+                sed -i 's|BACKEND=X|BACKEND=cage|g' "${service_file}"
+            fi
         fi
     done
 

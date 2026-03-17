@@ -96,3 +96,40 @@ if ! grep -q 'video=HDMI-A-1:800x480M@60' "${BOOT_PATH}/cmdline.txt"; then
     echo "Adding HDMI timing override for 800x480 display"
     sed -i 's/$/ video=HDMI-A-1:800x480M@60/' "${BOOT_PATH}/cmdline.txt"
 fi
+
+########################################
+# Break rc-local ordering cycle for    #
+# Plymouth quit services                #
+########################################
+
+# plymouth-quit*.service ship with After=rc-local.service, which creates a
+# circular dependency when rc.local runs /postrename and postrename tries to
+# start KlipperScreen (which is After=plymouth-quit-wait.service).
+# Drop-ins clear that ordering so Plymouth can quit independently.
+
+mkdir -p /etc/systemd/system/plymouth-quit.service.d
+cat > /etc/systemd/system/plymouth-quit.service.d/10-no-rc-local.conf << 'EOF'
+[Unit]
+After=
+After=plymouth-start.service systemd-user-sessions.service
+EOF
+
+mkdir -p /etc/systemd/system/plymouth-quit-wait.service.d
+cat > /etc/systemd/system/plymouth-quit-wait.service.d/10-no-rc-local.conf << 'EOF'
+[Unit]
+After=
+After=plymouth-start.service systemd-user-sessions.service
+EOF
+
+########################################
+# Ensure Plymouth quits during boot    #
+########################################
+
+# plymouth-quit-wait.service is "static" (no [Install] section).
+# On desktop images, display-manager.service pulls it in. We have no display
+# manager, so we wire it into multi-user.target explicitly.
+mkdir -p /etc/systemd/system/multi-user.target.wants
+ln -sf /lib/systemd/system/plymouth-quit-wait.service \
+    /etc/systemd/system/multi-user.target.wants/plymouth-quit-wait.service
+ln -sf /lib/systemd/system/plymouth-quit.service \
+    /etc/systemd/system/multi-user.target.wants/plymouth-quit.service
