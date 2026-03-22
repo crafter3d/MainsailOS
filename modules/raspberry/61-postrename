@@ -14,29 +14,12 @@ install_cleanup_trap
 source /files/00-config
 
 ########################################
-# Copy script & set user rights        #
+# Install first-boot script & service #
 ########################################
 
-cp /files/postrename /postrename
-chmod 0755 /postrename
+install -d -m 0755 /opt/crafter3d
+cp /files/postrename /opt/crafter3d/firstboot.sh
+chmod 0755 /opt/crafter3d/firstboot.sh
 
-########################################
-# Create rc.local, if it doesnt exists #
-########################################
-
-if [ ! -f /etc/rc.local ]; then
-    cat <<'EOF' | tee /etc/rc.local
-#!/bin/sh -e
-# rc.local
-
-exit 0
-EOF
-    chmod +x /etc/rc.local
-fi
-
-########################################
-# Add postrename to rc.local           #
-########################################
-
-sed -i 's@exit 0@@' /etc/rc.local
-echo -e "/postrename\nexit 0\n" | tee -a /etc/rc.local
+cp /files/crafter3d-firstboot.service /etc/systemd/system/crafter3d-firstboot.service
+systemctl_if_exists enable crafter3d-firstboot.service

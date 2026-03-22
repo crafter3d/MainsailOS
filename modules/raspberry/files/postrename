@@ -71,18 +71,12 @@ stop_services() {
     done
 }
 
-start_services() {
-    for srv in "${SERVICES[@]}"; do
-        systemctl start "${srv}.service"
-    done
-}
-
 ### Clean up
 cleanup() {
-    # Cleanup self
-    rm -rf "${0}"
-    # Cleanup rc.local
-    sed -i '/\/postrename/d' /etc/rc.local
+    # Remove first-boot script
+    rm -f /opt/crafter3d/firstboot.sh
+    # Disable first-boot service
+    systemctl disable crafter3d-firstboot.service 2>/dev/null || true
 }
 
 ### Change nginx root
@@ -354,7 +348,7 @@ systemd_count="$(grep -c 'systemd\.run' "${cmdltxt}" 2>/dev/null || true)"
 if [[ "${init_count}" != "0" ]] && [[ "${systemd_count}" != "0" ]]; then
     echo -e "[${RED}ERROR${NOC}] \
     ${WHITE}Sdcard resize and firstrun are not finished yet ... [ABORT]${NOC}"
-    ## Make sure not failing rc.local
+    ## Do not fail firstboot service
     return 0
 fi
 ## Abort if user = build user (default; already set up for this user)
@@ -362,16 +356,6 @@ if [[ "${DEFAULT_USER}" == "${BUILD_USER}" ]]; then
     patch_unresolved_baseuser_placeholders
     ensure_cn_runtime_files
     systemctl daemon-reload
-    systemctl restart nginx || true
-    systemctl restart klipper || true
-    systemctl restart moonraker || true
-    systemctl restart crowsnest || true
-    systemctl restart sonar || true
-    ## Enable KlipperScreen if it was installed at build time
-    if [[ "${KS_INSTALLED}" = "1" ]]; then
-        echo -e "${WHITE}Enabling KlipperScreen service ...${NOC}"
-        systemctl enable --now KlipperScreen.service || true
-    fi
     echo -e "[${YEL}SKIPPED${NOC}] \
     ${WHITE}User is ${DEFAULT_USER}! Nothing to do ...${NOC}"
     cleanup
@@ -434,34 +418,23 @@ if [[ -d "/home/${DEFAULT_USER}/kiauh" ]]; then
 fi
 fix_cn_links
 echo -e "${WHITE}Fix broken symlinks ...${NOC}[${GRE}OK${NOC}]"
-## do a short break
-sleep 2
 ## reload daemons
 echo -en "${WHITE}Apply service file changes ...${NOC}\r"
 systemctl daemon-reload
 echo -e "${WHITE}Apply service file changes ...${NOC}[${GRE}OK${NOC}]"
-## do a short break
-sleep 2
-## enable KlipperScreen persistently if installed
+## enable KlipperScreen persistently if installed (without --now)
 if [[ "${KS_INSTALLED}" = "1" ]]; then
     echo -en "${WHITE}Enabling KlipperScreen service ...${NOC}\r"
     systemctl enable KlipperScreen.service || true
     echo -e "${WHITE}Enabling KlipperScreen service ...${NOC}[${GRE}OK${NOC}]"
 fi
-## restart services
-echo -e "${WHITE}Trying to restart services ...${NOC}"
-start_services
-## wait 30sec to come up
-echo -e "${WHITE}Waiting 30 seconds for service restart completed ...${NOC}"
-sleep 30
 ## remove stale build user after successful migration
 echo -en "${WHITE}Removing stale build user ...${NOC}\r"
 remove_build_user
 echo -e "${WHITE}Removing stale build user ...${NOC}[${GRE}OK${NOC}]"
 ## Cleanup
-echo -e "${WHITE}Cleanup files, remove postrename ...${NOC}"
+echo -e "${WHITE}Cleanup files, remove firstboot ...${NOC}"
 cleanup
-sleep 2
 ## reboot system
 echo -e "${WHITE}Reboot system ...${NOC}"
 reboot

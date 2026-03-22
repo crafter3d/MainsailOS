@@ -1,0 +1,15 @@
+[Unit]
+Description=Crafter3D First Boot Provisioning
+After=network-online.target systemd-user-sessions.service
+ConditionPathExists=/opt/crafter3d/firstboot.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/opt/crafter3d/firstboot.sh
+TimeoutStartSec=300
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
