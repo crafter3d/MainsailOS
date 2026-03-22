@@ -2,6 +2,11 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.8](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.8) - 2026-03-22
+### Bug Fixes and Improvements
+
+- Move away from rc.local to own firstboot service
+
 ## [2.3.7](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.7) - 2026-03-17
 ### Bug Fixes and Improvements
 
