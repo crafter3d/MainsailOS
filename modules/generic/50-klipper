@@ -61,6 +61,23 @@ apt-get install --yes "${DEPS[@]}"
 # Ensure base user exists              #
 ########################################
 
+uid1000_user="$(awk -F ':' '$3 == 1000 { print $1; exit }' /etc/passwd)"
+if [[ -n "${uid1000_user}" ]] && [[ "${uid1000_user}" != "${BASE_USER}" ]]; then
+    # Normalize base-image default user to BASE_USER so UID 1000 is preserved.
+    if id -u "${BASE_USER}" > /dev/null 2>&1; then
+        userdel -r "${BASE_USER}" 2>/dev/null || userdel "${BASE_USER}" 2>/dev/null || true
+        rm -rf "/home/${BASE_USER}" 2>/dev/null || true
+    fi
+    if getent group "${BASE_USER}" > /dev/null 2>&1; then
+        groupdel "${BASE_USER}" 2>/dev/null || true
+    fi
+    if getent group "${uid1000_user}" > /dev/null 2>&1; then
+        groupmod -n "${BASE_USER}" "${uid1000_user}" 2>/dev/null || true
+    fi
+    usermod -l "${BASE_USER}" "${uid1000_user}"
+    usermod -d "/home/${BASE_USER}" -m "${BASE_USER}"
+fi
+
 if ! id -u "${BASE_USER}" > /dev/null 2>&1; then
     useradd -m -s /bin/bash "${BASE_USER}"
 fi

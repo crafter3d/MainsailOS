@@ -101,6 +101,9 @@ change_service_user() {
 change_env_user() {
     local env_files env_path
     env_path="/home/${DEFAULT_USER}/printer_data/systemd"
+    if [[ ! -d "${env_path}" ]]; then
+        return
+    fi
     env_files="$(find "${env_path}" -type f -name "*.env" -printf "%f ")"
     for ef in ${env_files}; do
         sed -i "s|${BUILD_USER}|${DEFAULT_USER}|g" "${env_path}/${ef}"
@@ -112,11 +115,28 @@ relocate_home() {
         return
     fi
 
-    if [[ -d "/home/${BUILD_USER}" ]] && [[ ! -d "/home/${DEFAULT_USER}/klipper" ]]; then
+    if [[ -d "/home/${BUILD_USER}" ]]; then
         echo -e "${WHITE}Relocating files from /home/${BUILD_USER} to /home/${DEFAULT_USER} ...${NOC}"
+        install -d -m 755 -o "${DEFAULT_USER}" -g "${DEFAULT_USER}" "/home/${DEFAULT_USER}"
         cp -a "/home/${BUILD_USER}/." "/home/${DEFAULT_USER}/"
         chown -R "${DEFAULT_USER}:${DEFAULT_USER}" "/home/${DEFAULT_USER}"
     fi
+}
+
+fix_absolute_symlinks() {
+    local link target new_target
+
+    if [[ "${DEFAULT_USER}" == "${BUILD_USER}" ]]; then
+        return
+    fi
+
+    while IFS= read -r -d '' link; do
+        target="$(readlink "${link}")"
+        if [[ "${target}" == "/home/${BUILD_USER}/"* ]]; then
+            new_target="/home/${DEFAULT_USER}/${target#/home/${BUILD_USER}/}"
+            ln -sfn "${new_target}" "${link}"
+        fi
+    done < <(find "/home/${DEFAULT_USER}" -type l -print0 2>/dev/null)
 }
 
 remove_build_user() {
@@ -135,6 +155,7 @@ remove_build_user() {
 
 relocate_venv() {
     local -a venvs
+    local venv_path
     venvs=(klippy-env moonraker-env)
 
     ### KlipperScreen workaround
@@ -143,14 +164,19 @@ relocate_venv() {
     fi
 
     for venv in "${venvs[@]}"; do
+        venv_path="/home/${DEFAULT_USER}/${venv}"
+        if [[ ! -d "${venv_path}" ]]; then
+            continue
+        fi
+
         # Move venv
         # delete pycache (*.pyc files)
-        find "/home/${DEFAULT_USER}/${venv}" -name "__pycache__" -type d -exec rm -rf {} +
+        find "${venv_path}" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null
 
         # repair shebangs
         while IFS= read -r file ; do
             sed -i "s|${BUILD_USER}/${venv}|${DEFAULT_USER}/${venv}|g" "${file}"
-        done < <(grep -iR "${BUILD_USER}/${venv}" "/home/${DEFAULT_USER}/${venv}"/* | cut -d":" -f1)
+        done < <(grep -iR "${BUILD_USER}/${venv}" "${venv_path}"/* 2>/dev/null | cut -d":" -f1 || true)
     done
 }
 
@@ -180,8 +206,12 @@ patch_polkit_rules() {
 }
 
 patch_cn_logpath() {
-    sed -i "s|/home/${BUILD_USER}/printer_data/logs/crowsnest.log|/home/${DEFAULT_USER}/printer_data/logs/crowsnest.log|g" \
-        "/home/${DEFAULT_USER}/printer_data/config/crowsnest.conf"
+    local cn_cfg
+    cn_cfg="/home/${DEFAULT_USER}/printer_data/config/crowsnest.conf"
+    if [[ -f "${cn_cfg}" ]]; then
+        sed -i "s|/home/${BUILD_USER}/printer_data/logs/crowsnest.log|/home/${DEFAULT_USER}/printer_data/logs/crowsnest.log|g" \
+            "${cn_cfg}"
+    fi
 }
 
 patch_cn_logrotate() {
@@ -302,18 +332,24 @@ fix_timelapse_links() {
     config_dir="/home/${DEFAULT_USER}/printer_data/config"
     src_dir="/home/${DEFAULT_USER}/moonraker-timelapse"
     target_dir="/home/${DEFAULT_USER}/moonraker/moonraker/components"
-    sudo -u "${DEFAULT_USER}" \
-    ln -sf "${src_dir}/component/timelapse.py" "${target_dir}/timelapse.py"
-    sudo -u "${DEFAULT_USER}" \
-    ln -sf "${src_dir}/klipper_macro/timelapse.cfg" "${config_dir}/timelapse.cfg"
+    if [[ -f "${src_dir}/component/timelapse.py" ]] && [[ -d "${target_dir}" ]]; then
+        sudo -u "${DEFAULT_USER}" \
+        ln -sf "${src_dir}/component/timelapse.py" "${target_dir}/timelapse.py"
+    fi
+    if [[ -f "${src_dir}/klipper_macro/timelapse.cfg" ]] && [[ -d "${config_dir}" ]]; then
+        sudo -u "${DEFAULT_USER}" \
+        ln -sf "${src_dir}/klipper_macro/timelapse.cfg" "${config_dir}/timelapse.cfg"
+    fi
 }
 
 fix_mainsailcfg_links() {
     local config_dir src_dir target_dir
     config_dir="/home/${DEFAULT_USER}/printer_data/config"
     src_dir="/home/${DEFAULT_USER}/mainsail-config"
-    sudo -u "${DEFAULT_USER}" \
-    ln -sf "${src_dir}/mainsail.cfg" "${config_dir}/mainsail.cfg"
+    if [[ -f "${src_dir}/mainsail.cfg" ]] && [[ -d "${config_dir}" ]]; then
+        sudo -u "${DEFAULT_USER}" \
+        ln -sf "${src_dir}/mainsail.cfg" "${config_dir}/mainsail.cfg"
+    fi
 }
 
 # Optional if kiauh module is used
@@ -327,8 +363,18 @@ fix_kiauh_links() {
 fix_cn_links() {
     local tools_dir
     tools_dir="/home/${DEFAULT_USER}/crowsnest/tools"
-    sudo -u "${DEFAULT_USER}" \
-    ln -sf "${tools_dir}/libs/pkglist-rpi.sh" "${tools_dir}/pkglist.sh"
+    if [[ -f "${tools_dir}/libs/pkglist-rpi.sh" ]]; then
+        sudo -u "${DEFAULT_USER}" \
+        ln -sf "${tools_dir}/libs/pkglist-rpi.sh" "${tools_dir}/pkglist.sh"
+    fi
+}
+
+refresh_printer_config_links() {
+    local install_script
+    install_script="/home/${DEFAULT_USER}/printer-config/scripts/install.sh"
+    if [[ -f "${install_script}" ]]; then
+        sudo -u "${DEFAULT_USER}" HOME="/home/${DEFAULT_USER}" bash "${install_script}"
+    fi
 }
 
 main() {
@@ -366,6 +412,7 @@ echo -e "\n\t${WHITE}Trying to fix user rename ...${NOC}"
 ## Relocate home content before patching services and envs.
 echo -en "${WHITE}Relocating user home content ...${NOC}\r"
 relocate_home
+fix_absolute_symlinks
 echo -e "${WHITE}Relocating user home content ...${NOC}[${GRE}OK${NOC}]"
 ## Stop services
 echo -en "${WHITE}Stopping all related services ...${NOC}\r"
@@ -412,6 +459,7 @@ echo -en "${WHITE}Fix broken symlinks ...${NOC}\r"
 fix_broken_links
 fix_timelapse_links
 fix_mainsailcfg_links
+refresh_printer_config_links
 # Optional if kiauh module is used
 if [[ -d "/home/${DEFAULT_USER}/kiauh" ]]; then
     fix_kiauh_links
