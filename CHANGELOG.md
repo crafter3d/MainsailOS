@@ -2,6 +2,11 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.9](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.9) - 2026-03-23
+### Bug Fixes and Improvements
+
+- Fix postrenames
+
 ## [2.3.8](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.8) - 2026-03-22
 ### Bug Fixes and Improvements
 
