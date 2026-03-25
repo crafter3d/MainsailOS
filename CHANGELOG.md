@@ -2,6 +2,11 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.10](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.10) - 2026-03-25
+### Features
+
+- Add btberrywifi discovery
+
 ## [2.3.9](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.9) - 2026-03-23
 ### Bug Fixes and Improvements
 
