@@ -1,0 +1,83 @@
+#!/bin/bash
+set -xe
+export LC_ALL=C
+
+########################################
+# Functions and Basic Configuration    #
+########################################
+
+source /common.sh
+install_cleanup_trap
+source /files/00-config
+
+########################################
+# Configuration                        #
+########################################
+
+BTWIFISET_DIR="/usr/local/btwifiset"
+BTWIFISET_BASE_URL="https://raw.githubusercontent.com/nksan/Rpi-SetWiFi-viaBluetooth/main"
+BTWIFISET_FILES=(btwifiset.py btpassword.py passwordREADME.txt)
+
+DEPS=(
+    wget
+    ca-certificates
+    bluez
+    python3-gi
+    libdbus-glib-1-dev
+    python3-dbus
+    python3-cryptography
+)
+
+apt-get install --yes "${DEPS[@]}"
+
+########################################
+# Install btwifiset files              #
+########################################
+
+mkdir -p "${BTWIFISET_DIR}"
+
+for f in "${BTWIFISET_FILES[@]}"; do
+    wget -qO "${BTWIFISET_DIR}/${f}" "${BTWIFISET_BASE_URL}/${f}"
+    if [[ "${f}" == *.txt ]]; then
+        chmod 644 "${BTWIFISET_DIR}/${f}"
+    else
+        chmod 755 "${BTWIFISET_DIR}/${f}"
+    fi
+done
+
+########################################
+# Bluetooth service compatibility      #
+########################################
+
+cp /lib/systemd/system/bluetooth.service /etc/systemd/system/bluetooth.service
+
+if ! sed -n '/^ExecStart/p' /etc/systemd/system/bluetooth.service | grep -q -- '--experimental'; then
+    sed -i 's/^ExecStart.*bluetoothd\b/& --experimental/' /etc/systemd/system/bluetooth.service
+fi
+
+if ! sed -n '/^ExecStart/p' /etc/systemd/system/bluetooth.service | grep -q -- '-P battery'; then
+    sed -i 's/^ExecStart.*bluetoothd\b/& -P battery/' /etc/systemd/system/bluetooth.service
+fi
+
+mkdir -p /etc/systemd/system/bluetooth.target.wants
+ln -sf /etc/systemd/system/bluetooth.service /etc/systemd/system/bluetooth.target.wants/bluetooth.service
+ln -sf /etc/systemd/system/bluetooth.service /etc/systemd/system/dbus-org.bluez.service
+
+if grep -qE '^\s*#?\s*ReverseServiceDiscovery\s*=' /etc/bluetooth/main.conf; then
+    sed -i -E '/^\s*#?\s*ReverseServiceDiscovery\s*=/c\ReverseServiceDiscovery = false' /etc/bluetooth/main.conf
+else
+    printf '\nReverseServiceDiscovery = false\n' >> /etc/bluetooth/main.conf
+fi
+
+########################################
+# Install conditional service wrapper  #
+########################################
+
+cp /files/btberrywifi/check-wifi-configured /usr/local/bin/check-wifi-configured
+cp /files/btberrywifi/btwifiset.service /etc/systemd/system/btwifiset.service
+chmod 755 /usr/local/bin/check-wifi-configured
+
+systemctl_if_exists daemon-reload
+systemctl_if_exists enable bluetooth
+systemctl_if_exists enable hciuart
+systemctl_if_exists enable btwifiset

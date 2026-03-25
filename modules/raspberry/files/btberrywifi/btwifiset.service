@@ -1,0 +1,12 @@
+[Unit]
+Description=btwifiset Wi-Fi Configuration over Bluetooth
+After=bluetooth.target network.target
+Wants=bluetooth.target
+
+[Service]
+Type=simple
+ExecCondition=/usr/local/bin/check-wifi-configured
+ExecStart=python3 /usr/local/btwifiset/btwifiset.py --syslog
+
+[Install]
+WantedBy=multi-user.target

@@ -40,9 +40,8 @@ dtparam=spi=on
 
 
 ## Enable Hardware UART for Serial Communication
-## This also disables Bluetooth!
+## Keep Bluetooth enabled for BTBerryWifi setup support.
 enable_uart=1
-dtoverlay=disable-bt
 
 ## Enable I2C by default.
 ## This is used by Klipper's Host MCU

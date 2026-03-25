@@ -28,6 +28,7 @@ NM_STATE="/var/lib/NetworkManager/NetworkManager.state"
 
 if hash rfkill 2> /dev/null; then
     rfkill unblock wifi
+    rfkill unblock bluetooth
 fi
 
 ########################################
