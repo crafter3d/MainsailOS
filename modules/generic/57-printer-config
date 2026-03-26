@@ -41,7 +41,9 @@ popd &> /dev/null || exit 1
 # (printer_data/config → printer-config)
 ########################################
 
-sudo -u "${BASE_USER}" bash "${TARGET_DIR}/scripts/install.sh"
+sudo -u "${BASE_USER}" \
+    env HOME="/home/${BASE_USER}" \
+    bash "${TARGET_DIR}/scripts/install.sh"
 
 ########################################
 # Install firmware build profiles      #
@@ -90,3 +92,6 @@ else
         echo "WARNING: no fallback firmware binaries found under ${FALLBACK_FIRMWARE_DIR}"
     fi
 fi
+
+# Ensure runtime config files and symlinks are consistently owned by BASE_USER.
+chown -R "${BASE_USER}:${BASE_USER}" /home/"${BASE_USER}"/printer_data

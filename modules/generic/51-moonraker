@@ -71,6 +71,7 @@ popd &> /dev/null || exit 1
 ########################################
 
 cp /files/moonraker.conf /home/"${BASE_USER}"/printer_data/config/moonraker.conf
+chown "${BASE_USER}:${BASE_USER}" /home/"${BASE_USER}"/printer_data/config/moonraker.conf
 
 ########################################
 # Enable service                       #
