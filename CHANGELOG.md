@@ -2,6 +2,15 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.12](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.12) - 2026-03-27
+### Bug Fixes and Improvements
+
+- Recognize installed software in mainsail/moonraker
+
+### Other
+
+- Bump version
+
 ## [2.3.11](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.11) - 2026-03-26
 ### Bug Fixes and Improvements
 
