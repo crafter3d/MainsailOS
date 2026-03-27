@@ -343,12 +343,16 @@ fix_timelapse_links() {
 }
 
 fix_mainsailcfg_links() {
-    local config_dir src_dir target_dir
+    local config_dir src_dir install_script
     config_dir="/home/${DEFAULT_USER}/printer_data/config"
     src_dir="/home/${DEFAULT_USER}/mainsail-config"
-    if [[ -f "${src_dir}/mainsail.cfg" ]] && [[ -d "${config_dir}" ]]; then
+    install_script="${src_dir}/scripts/install.sh"
+    if [[ -f "${install_script}" ]]; then
+        sudo -u "${DEFAULT_USER}" HOME="/home/${DEFAULT_USER}" bash "${install_script}"
+    elif [[ -f "${src_dir}/mainsail.cfg" ]] && [[ -d "${config_dir}" ]]; then
+        # Fallback for older mainsail-config trees without an installer script.
         sudo -u "${DEFAULT_USER}" \
-        ln -sf "${src_dir}/mainsail.cfg" "${config_dir}/mainsail.cfg"
+        install -m 0644 "${src_dir}/mainsail.cfg" "${config_dir}/mainsail.cfg"
     fi
 }
 
@@ -454,8 +458,8 @@ echo -e "${WHITE}Ensuring crowsnest runtime files ...${NOC}[${GRE}OK${NOC}]"
 echo -en "${WHITE}Patching unresolved BASE_USER placeholders ...${NOC}\r"
 patch_unresolved_baseuser_placeholders
 echo -e "${WHITE}Patching unresolved BASE_USER placeholders ...${NOC}[${GRE}OK${NOC}]"
-## fix broken links
-echo -en "${WHITE}Fix broken symlinks ...${NOC}\r"
+## fix broken links and refresh copied configs
+echo -en "${WHITE}Fix runtime links and refresh configs ...${NOC}\r"
 fix_broken_links
 fix_timelapse_links
 fix_mainsailcfg_links
@@ -465,7 +469,7 @@ if [[ -d "/home/${DEFAULT_USER}/kiauh" ]]; then
     fix_kiauh_links
 fi
 fix_cn_links
-echo -e "${WHITE}Fix broken symlinks ...${NOC}[${GRE}OK${NOC}]"
+echo -e "${WHITE}Fix runtime links and refresh configs ...${NOC}[${GRE}OK${NOC}]"
 ## reload daemons
 echo -en "${WHITE}Apply service file changes ...${NOC}\r"
 systemctl daemon-reload

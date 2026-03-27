@@ -37,8 +37,8 @@ fi
 popd &> /dev/null || exit 1
 
 ########################################
-# Run install script to create symlinks#
-# (printer_data/config → printer-config)
+# Run install script to refresh copied  #
+# config content in printer_data/config #
 ########################################
 
 sudo -u "${BASE_USER}" \
