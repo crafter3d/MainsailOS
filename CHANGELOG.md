@@ -2,6 +2,15 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.13](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.13) - 2026-03-29
+### Bug Fixes and Improvements
+
+- Inconsistencies in update_manager
+
+### Other
+
+- Bump version
+
 ## [2.3.12](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.12) - 2026-03-27
 ### Bug Fixes and Improvements
 
