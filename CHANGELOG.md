@@ -2,6 +2,11 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.14](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.14) - 2026-03-29
+### Bug Fixes and Improvements
+
+- Fix moonraker version in update manager
+
 ## [2.3.13](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.13) - 2026-03-29
 ### Bug Fixes and Improvements
 
