@@ -23,17 +23,17 @@ MOONRAKER_COMPONENTS_PATH="/home/${BASE_USER}/moonraker/moonraker/components"
 PRINTER_CONFIG_PATH="/home/${BASE_USER}/printer_data/config"
 DEPS=(git ffmpeg)
 
-ensure_moonraker_timelapse_gitignore() {
-    local moonraker_gitignore gitignore_entry
-    moonraker_gitignore="/home/${BASE_USER}/moonraker/.gitignore"
+ensure_moonraker_timelapse_gitexclude() {
+    local moonraker_gitexclude gitignore_entry
+    moonraker_gitexclude="/home/${BASE_USER}/moonraker/.git/info/exclude"
     gitignore_entry="moonraker/components/timelapse.py"
 
     if [[ ! -d "/home/${BASE_USER}/moonraker/.git" ]]; then
         return
     fi
 
-    if ! sudo -u "${BASE_USER}" grep -Fxq "${gitignore_entry}" "${moonraker_gitignore}" 2>/dev/null; then
-        echo "${gitignore_entry}" | sudo -u "${BASE_USER}" tee -a "${moonraker_gitignore}" > /dev/null
+    if ! sudo -u "${BASE_USER}" grep -Fxq "${gitignore_entry}" "${moonraker_gitexclude}" 2>/dev/null; then
+        echo "${gitignore_entry}" | sudo -u "${BASE_USER}" tee -a "${moonraker_gitexclude}" > /dev/null
     fi
 }
 
@@ -64,7 +64,7 @@ if [[ -d "${MOONRAKER_COMPONENTS_PATH}" ]]; then
     ln -sf "${SRC_DIR}/component/timelapse.py" "${MOONRAKER_COMPONENTS_PATH}/timelapse.py"
 fi
 
-ensure_moonraker_timelapse_gitignore
+ensure_moonraker_timelapse_gitexclude
 
 ########################################
 # Link macros to printer_data/config   #

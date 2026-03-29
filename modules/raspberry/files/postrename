@@ -328,11 +328,11 @@ fix_broken_links() {
 }
 
 fix_timelapse_links() {
-    local config_dir src_dir target_dir moonraker_gitignore gitignore_entry
+    local config_dir src_dir target_dir moonraker_gitexclude gitignore_entry
     config_dir="/home/${DEFAULT_USER}/printer_data/config"
     src_dir="/home/${DEFAULT_USER}/moonraker-timelapse"
     target_dir="/home/${DEFAULT_USER}/moonraker/moonraker/components"
-    moonraker_gitignore="/home/${DEFAULT_USER}/moonraker/.gitignore"
+    moonraker_gitexclude="/home/${DEFAULT_USER}/moonraker/.git/info/exclude"
     gitignore_entry="moonraker/components/timelapse.py"
     if [[ -f "${src_dir}/component/timelapse.py" ]] && [[ -d "${target_dir}" ]]; then
         sudo -u "${DEFAULT_USER}" \
@@ -343,8 +343,8 @@ fix_timelapse_links() {
         ln -sf "${src_dir}/klipper_macro/timelapse.cfg" "${config_dir}/timelapse.cfg"
     fi
     if [[ -d "/home/${DEFAULT_USER}/moonraker/.git" ]]; then
-        if ! sudo -u "${DEFAULT_USER}" grep -Fxq "${gitignore_entry}" "${moonraker_gitignore}" 2>/dev/null; then
-            echo "${gitignore_entry}" | sudo -u "${DEFAULT_USER}" tee -a "${moonraker_gitignore}" > /dev/null
+        if ! sudo -u "${DEFAULT_USER}" grep -Fxq "${gitignore_entry}" "${moonraker_gitexclude}" 2>/dev/null; then
+            echo "${gitignore_entry}" | sudo -u "${DEFAULT_USER}" tee -a "${moonraker_gitexclude}" > /dev/null
         fi
     fi
 }
