@@ -113,8 +113,20 @@ sudo -u "${BASE_USER}" git clone ${REPO} klipper
 if [[ -n "${KLIPPER_PINNED_REF}" ]]; then
     echo "Checking out pinned Klipper ref: ${KLIPPER_PINNED_REF}"
     sudo -u "${BASE_USER}" git -C "${SRC_DIR}" fetch --all --tags
-    sudo -u "${BASE_USER}" git -C "${SRC_DIR}" checkout "${KLIPPER_PINNED_REF}"
+    # Keep HEAD attached to the default branch while pinning the commit.
+    sudo -u "${BASE_USER}" git -C "${SRC_DIR}" reset --hard "${KLIPPER_PINNED_REF}"
 fi
+
+current_klipper_branch="$(sudo -u "${BASE_USER}" git -C "${SRC_DIR}" rev-parse --abbrev-ref HEAD)"
+if [[ "${current_klipper_branch}" == "HEAD" ]]; then
+    echo "ERROR: Klipper checkout is detached after pinning"
+    exit 1
+fi
+if ! sudo -u "${BASE_USER}" git -C "${SRC_DIR}" remote get-url origin > /dev/null; then
+    echo "ERROR: Klipper origin remote is missing"
+    exit 1
+fi
+echo "Klipper branch: ${current_klipper_branch}"
 
 echo "Installed Klipper revision:"
 sudo -u "${BASE_USER}" git -C "${SRC_DIR}" describe --tags --always || true

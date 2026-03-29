@@ -68,12 +68,18 @@ sudo -u "${BASE_USER}" unzip mainsail.zip -d /home/"${BASE_USER}"/mainsail
 ## cleanup
 rm /home/"${BASE_USER}"/mainsail.zip
 
-if [[ -f "/home/${BASE_USER}/mainsail/release_info.json" ]]; then
-    installed_version="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /home/"${BASE_USER}"/mainsail/release_info.json | head -n1)"
-    if [[ -n "${installed_version}" ]]; then
-        echo "Installed Mainsail release: ${installed_version}"
-    fi
+release_info_path="/home/${BASE_USER}/mainsail/release_info.json"
+if [[ ! -f "${release_info_path}" ]]; then
+    echo "ERROR: Mainsail release_info.json is missing"
+    exit 1
 fi
+
+installed_version="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${release_info_path}" | head -n1)"
+if [[ -z "${installed_version}" ]] || [[ ! "${installed_version}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z]+)*$ ]]; then
+    echo "ERROR: Invalid Mainsail release version in release_info.json: ${installed_version:-<empty>}"
+    exit 1
+fi
+echo "Installed Mainsail release: ${installed_version}"
 
 ########################################
 # Fix userrights                       #
