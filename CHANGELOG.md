@@ -2,6 +2,15 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.15](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.15) - 2026-03-30
+### Bug Fixes and Improvements
+
+- Make btberrywifi start only if no internet
+
+### Other
+
+- Increase version
+
 ## [2.3.14](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.14) - 2026-03-29
 ### Bug Fixes and Improvements
 
