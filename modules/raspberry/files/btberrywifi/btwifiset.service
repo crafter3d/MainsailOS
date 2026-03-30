@@ -1,12 +1,16 @@
 [Unit]
 Description=btwifiset Wi-Fi Configuration over Bluetooth
-After=bluetooth.target network.target
-Wants=bluetooth.target
+After=bluetooth.service network-online.target
+Wants=network-online.target
+Requires=bluetooth.service
 
 [Service]
 Type=simple
-ExecCondition=/usr/local/bin/check-wifi-configured
-ExecStart=python3 /usr/local/btwifiset/btwifiset.py --syslog
+ExecCondition=/usr/local/bin/check-no-internet
+ExecStartPre=/usr/local/bin/prepare-bt-adapter
+ExecStart=python3 /usr/local/btwifiset/btwifiset.py --syslog --timeout 60
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+
+# Prepare the Bluetooth adapter before btwifiset starts.
+# bluetooth.service should already be running at this point.
+
+rfkill unblock bluetooth 2>/dev/null || true
+sleep 1
+
+# Single piped session — exits immediately after commands complete.
+printf 'power on\ndiscoverable on\npairable on\n' | bluetoothctl 2>/dev/null || true
+
+exit 0

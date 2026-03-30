@@ -22,6 +22,7 @@ DEPS=(
     wget
     ca-certificates
     bluez
+    rfkill
     python3-gi
     libdbus-glib-1-dev
     python3-dbus
@@ -45,37 +46,50 @@ for f in "${BTWIFISET_FILES[@]}"; do
     fi
 done
 
-########################################
-# Bluetooth service compatibility      #
-########################################
-
-cp /lib/systemd/system/bluetooth.service /etc/systemd/system/bluetooth.service
-
-if ! sed -n '/^ExecStart/p' /etc/systemd/system/bluetooth.service | grep -q -- '--experimental'; then
-    sed -i 's/^ExecStart.*bluetoothd\b/& --experimental/' /etc/systemd/system/bluetooth.service
+# Normalize upstream btwifiset BLE local name handling for app compatibility.
+if grep -q 'return result.stdout' "${BTWIFISET_DIR}/btwifiset.py"; then
+    sed -i 's/return result.stdout/return result.stdout.strip()/' "${BTWIFISET_DIR}/btwifiset.py"
 fi
 
-if ! sed -n '/^ExecStart/p' /etc/systemd/system/bluetooth.service | grep -q -- '-P battery'; then
-    sed -i 's/^ExecStart.*bluetoothd\b/& -P battery/' /etc/systemd/system/bluetooth.service
-fi
-
-mkdir -p /etc/systemd/system/bluetooth.target.wants
-ln -sf /etc/systemd/system/bluetooth.service /etc/systemd/system/bluetooth.target.wants/bluetooth.service
-ln -sf /etc/systemd/system/bluetooth.service /etc/systemd/system/dbus-org.bluez.service
-
-if grep -qE '^\s*#?\s*ReverseServiceDiscovery\s*=' /etc/bluetooth/main.conf; then
-    sed -i -E '/^\s*#?\s*ReverseServiceDiscovery\s*=/c\ReverseServiceDiscovery = false' /etc/bluetooth/main.conf
-else
-    printf '\nReverseServiceDiscovery = false\n' >> /etc/bluetooth/main.conf
+if grep -q 'self.properties\["LocalName"\] = dbus.String(self.hostname)' "${BTWIFISET_DIR}/btwifiset.py"; then
+    sed -i 's/self.properties\["LocalName"\] = dbus.String(self.hostname)/self.properties["LocalName"] = dbus.String((self.hostname or "crafter3d").strip())/' "${BTWIFISET_DIR}/btwifiset.py"
 fi
 
 ########################################
-# Install conditional service wrapper  #
+# BlueZ main.conf                     #
 ########################################
 
-cp /files/btberrywifi/check-wifi-configured /usr/local/bin/check-wifi-configured
+# Experimental mode is required for BLE advertising used by btwifiset.
+# Name sets the adapter friendly name. The remaining settings ensure the
+# adapter stays discoverable and pairable without timeout.
+for setting in \
+    'Experimental = true' \
+    'Name = crafter3d' \
+    'ReverseServiceDiscovery = false' \
+    'Privacy = off' \
+    'DiscoverableTimeout = 0' \
+    'PairableTimeout = 0'
+do
+    key="${setting%% =*}"
+    if grep -qE "^\s*#?\s*${key}\s*=" /etc/bluetooth/main.conf; then
+        sed -i -E "/^\s*#?\s*${key}\s*=/c\\${setting}" /etc/bluetooth/main.conf
+    else
+        sed -i "/^\[General\]/a\\${setting}" /etc/bluetooth/main.conf
+    fi
+done
+
+########################################
+# Install btwifiset service + helpers  #
+########################################
+
+# Remove any stale drop-ins from previous versions.
+rm -rf /etc/systemd/system/bluetooth.service.d
+
+cp /files/btberrywifi/check-no-internet /usr/local/bin/check-no-internet
+cp /files/btberrywifi/prepare-bt-adapter /usr/local/bin/prepare-bt-adapter
 cp /files/btberrywifi/btwifiset.service /etc/systemd/system/btwifiset.service
-chmod 755 /usr/local/bin/check-wifi-configured
+chmod 755 /usr/local/bin/check-no-internet
+chmod 755 /usr/local/bin/prepare-bt-adapter
 
 systemctl_if_exists daemon-reload
 systemctl_if_exists enable bluetooth

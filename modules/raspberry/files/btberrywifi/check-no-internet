@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+# Condition script for btwifiset.service:
+# - Exit 0 when internet is NOT reachable  -> start btwifiset
+# - Exit 1 when internet IS reachable      -> skip btwifiset
+#
+# By the time this runs, network-online.target has already been reached,
+# so NetworkManager has had its chance to connect. We just need a quick
+# probe rather than a long wait.
+
+# Ask NM for its current state (returns immediately).
+if command -v nmcli >/dev/null 2>&1; then
+    state=$(nmcli -t -f STATE general 2>/dev/null || echo "unknown")
+    case "$state" in
+        *connected*)
+            # NM thinks we are connected — verify with a real ping.
+            ping -c 1 -W 3 1.1.1.1 >/dev/null 2>&1 && exit 1
+            ;;
+    esac
+fi
+
+# Fallback: direct ping in case nmcli is unavailable.
+ping -c 1 -W 3 1.1.1.1 >/dev/null 2>&1 && exit 1
+
+# No connectivity detected — allow btwifiset to start.
+exit 0
