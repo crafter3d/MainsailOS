@@ -20,6 +20,7 @@ All images come with the necessary software pre-installed and configured, so you
 can focus on printing. For a complete list of what's included, see the
 [Features & Components](#features--components) section below.
 
+
 ## Documentation
 
 For detailed installation and setup guides, please visit our official
