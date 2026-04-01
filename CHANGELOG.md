@@ -2,6 +2,11 @@
 # Changelog
 All notable changes to MainsailOS will be documented in this file.
 
+## [2.3.17](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.17) - 2026-04-01
+### Bug Fixes and Improvements
+
+- Update printer-config
+
 ## [2.3.16](https://github.com/crafter3d/MainsailOS/releases/tag/2.3.16) - 2026-03-31
 ### Bug Fixes and Improvements
 
