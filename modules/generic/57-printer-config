@@ -43,6 +43,7 @@ popd &> /dev/null || exit 1
 
 sudo -u "${BASE_USER}" \
     env HOME="/home/${BASE_USER}" \
+    INSTALL_MODE=symlink \
     bash "${TARGET_DIR}/scripts/install.sh"
 
 ########################################

@@ -96,6 +96,7 @@ echo "Installing mainsail.cfg"
 sudo -u "${BASE_USER}" git clone ${CONFIG_REPO} mainsail-config
 sudo -u "${BASE_USER}" \
     env HOME="/home/${BASE_USER}" \
+    INSTALL_MODE=symlink \
     bash /home/"${BASE_USER}"/mainsail-config/scripts/install.sh
 
 ########################################
