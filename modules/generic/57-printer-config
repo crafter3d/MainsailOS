@@ -20,6 +20,25 @@ source /files/00-config
 REPO="https://github.com/crafter3d/printer-config.git"
 TARGET_DIR="/home/${BASE_USER}/printer-config"
 
+warn_missing_timelapse_include() {
+    local config_dir printer_cfg managed_cfg include_regex
+    config_dir="/home/${BASE_USER}/printer_data/config"
+    printer_cfg="${config_dir}/printer.cfg"
+    managed_cfg="${config_dir}/printer.managed.cfg"
+    include_regex='^\[include[[:space:]]+timelapse\.cfg\]'
+
+    if [[ -f "${printer_cfg}" ]] && grep -Eq "${include_regex}" "${printer_cfg}" 2>/dev/null; then
+        return
+    fi
+
+    if [[ -f "${managed_cfg}" ]] && grep -Eq "${include_regex}" "${managed_cfg}" 2>/dev/null; then
+        return
+    fi
+
+    echo "WARNING: Missing [include timelapse.cfg] in Klipper entrypoint."
+    echo "WARNING: Add it to ${printer_cfg} or ${managed_cfg} for TIMELAPSE_TAKE_FRAME macro mode."
+}
+
 ########################################
 # Install dependencies                 #
 ########################################
@@ -45,6 +64,8 @@ sudo -u "${BASE_USER}" \
     env HOME="/home/${BASE_USER}" \
     INSTALL_MODE=symlink \
     bash "${TARGET_DIR}/scripts/install.sh"
+
+warn_missing_timelapse_include
 
 ########################################
 # Install firmware build profiles      #
